@@ -1,26 +1,40 @@
 package hoare;
 
-import java.util.UUID;
+import hoare.Once.Performable;
+import hoare.errors.ChannelClosedError;
+import hoare.errors.Rollback;
 
-public class Push implements Operation {
+import java.io.Serializable;
+import java.util.UUID;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.commons.lang.SerializationUtils;
+
+final class Push implements Operation {
+
+	public interface PushBlock {
+		void yield(byte[] obj);
+	}
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
 	private Notifier notifier;
-	private Object object;
+	private byte[] object;
 
-	private Object mutex;
-	private ConditionVariable cvar;
+	private Lock mutex;
+	private Condition cvar;
 	private boolean sent;
 	private boolean closed;
 
-	public Push(Object object, UUID uuid, BlockingOnce blocking_once, Notifier notifier) {
-		this.object = Marshal.dump(object);
+	public Push(Serializable obj, UUID uuid, BlockingOnce blocking_once, Notifier notifier) {
+		this.object = SerializationUtils.serialize(obj);
 		this.uuid = uuid == null ? UUID.randomUUID() : uuid;
 		this.blocking_once = blocking_once;
 		this.notifier = notifier;
-		this.mutex = new Object();
-		this.cvar = new ConditionVariable();
+		this.mutex = new ReentrantLock();
+		this.cvar = mutex.newCondition();
 		this.sent = false;
 		this.closed = false;
 	}
@@ -34,60 +48,87 @@ public class Push implements Operation {
 		return false;
 	}
 
-    public void wait() {
-      synchronized (mutex) {
+    public void await() {
+    	mutex.lock();
+      try {
         while (!(sent || closed)) {
-          cvar.wait(mutex);
+          cvar.await();
         }
         if (closed) {
         	throw new ChannelClosedError();
         }
+      } catch (InterruptedException e) {
+    	  Thread.currentThread().interrupt();
+	} finally {
+    	  mutex.unlock();
       }
     }
 
-    public void receive() {
-      synchronized (mutex) {
+    public void receive(final PushBlock pushBlock) throws Error {
+    	mutex.lock();
+      try {
         if (closed) {
         	throw new ChannelClosedError();
         }
 
         if (blocking_once != null) {
-          _, error = blocking_once.perform() {
-            yield object;
-            sent = true;
-            cvar.signal();
-            if (notifier != null) {
-            	notifier.notify(self);
-            }
+          try {
+        	  blocking_once.perform(new Performable() {
+				@Override
+				public Object perform() {
+		        	  pushBlock.yield(object);
+		            sent = true;
+		            cvar.signal();
+		            if (notifier != null) {
+		            	notifier.notify(this);
+		            }
+					return null;
+				}
+			});
+          } catch (Error error) {
+          throw error;
           }
-
-          return error;
         } else {
           try {
-            yield object;
+        	  pushBlock.yield(object);
             sent = true;
             cvar.signal();
             if (notifier != null) {
-            	notifier.notify(self);
+            	notifier.notify(this);
             }
-          } catch (RollbackError e) {
+          } catch (Rollback e) {
           }
         }
+      } finally {
+    	  mutex.unlock();
       }
     }
 
 	@Override
 	public void close() {
-		synchronized (mutex) {
+		mutex.lock();
+		try {
 			if (sent) {
 				return;
 			}
 			closed = true;
-			cvar.broadcast();
+			cvar.signalAll();
 			if (notifier != null) {
 				notifier.notify(this);
 			}
+		} finally {
+			mutex.unlock();
 		}
+	}
+
+	@Override
+	public BlockingOnce getBlockingOnce() {
+		return blocking_once;
+	}
+
+	@Override
+	public UUID getUUID() {
+		return uuid;
 	}
 
 }

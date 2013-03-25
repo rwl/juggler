@@ -4,17 +4,24 @@ import hoare.Once.Performable;
 import hoare.errors.ChannelClosedError;
 import hoare.errors.Rollback;
 
+import java.io.Serializable;
 import java.util.UUID;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Pop implements Operation {
+import org.apache.commons.lang.SerializationUtils;
+
+final class Pop implements Operation {
+
+	public interface PopBlock {
+		byte[] yield();
+	}
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
 	private Notifier notifier;
-	private Object object;
+	private Serializable object;
 
 	private Lock mutex;
 	private Condition cvar;
@@ -56,7 +63,7 @@ public class Pop implements Operation {
 		return received();
 	}
 
-	public void send() {
+	public void send(final PopBlock popBlock) throws Error {
 		mutex.lock();
 		try {
 			if (closed) {
@@ -68,22 +75,22 @@ public class Pop implements Operation {
 					blocking_once.perform(new Performable() {
 						@Override
 						public Object perform() {
-//							object = Marshal.load(yield);
+							object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
 							received = true;
 							cvar.signal();
 							if (notifier != null) {
 								notifier.notify(this);
 							}
 
-								return object;
+								return null;
 						}
 					});
 				} catch (Error error) {
-//					return error;
+					throw error;
 				}
 			} else {
 				try {
-//					this.object = Marshal.load(yield);
+					this.object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
 					this.received = true;
 					this.cvar.signal();
 					if (notifier != null) {
@@ -112,5 +119,15 @@ public class Pop implements Operation {
 		} finally {
 			Thread.currentThread().interrupt();
 		}
+	}
+
+	@Override
+	public BlockingOnce getBlockingOnce() {
+		return blocking_once;
+	}
+
+	@Override
+	public UUID getUUID() {
+		return uuid;
 	}
 }

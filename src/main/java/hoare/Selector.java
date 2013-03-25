@@ -7,10 +7,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import hoare.Channel.Direction;
+import hoare.Direction;
 import hoare.errors.AlreadySelectedError;
 import hoare.errors.BlockMissingError;
 import hoare.errors.ChannelClosedError;
+import hoare.errors.DefaultCaseAlreadyDefinedError;
 import hoare.errors.InvalidDirectionError;
 
 public class Selector {
@@ -35,53 +36,67 @@ public class Selector {
 		public Channel channel;
 		public Direction direction;
 		public Object value;
-		public SelectorBlock blk;
+		public SelectorBlock[] blk;
+
+		Case(UUID uuid, Channel channel, Direction direction, Object value,
+				SelectorBlock[] blk) {
+			this.uuid = uuid;
+			this.channel = channel;
+			this.direction = direction;
+			this.value = value;
+			this.blk = blk;
+		}
 	}
 
 	private List<Case> ordered_cases;
-	private Map<Channel, Operation> operations;
+	private Map<Channel, Operation[]> operations;
 	private BlockingOnce blocking_once;
 	private Notifier notifier;
 	private Case default_case;
 	private boolean selected;
 
-	public Selector() {
-	      ordered_cases = new ArrayList<Case>();
-	      cases         = new HashMap<UUID, Selector.Case>();
-	      operations    = new HashMap<Channel, Operation>();
-	      blocking_once = new BlockingOnce();
-	      notifier      = new Notifier();
-	      default_case  = null;
-	      selected      = false;
+	private Selector() {
+		ordered_cases = new ArrayList<Case>();
+		cases = new HashMap<UUID, Selector.Case>();
+		operations = new HashMap<Channel, Operation[]>();
+		blocking_once = new BlockingOnce();
+		notifier = new Notifier();
+		default_case = null;
+		selected = false;
 	}
 
-    public Case defaultCase(SelectorBlock[] blk) {
-      if (default_case != null) {
-        throw new DefaultCaseAlreadyDefinedError();
-      } else {
-        default_case = self.getCase(new Channel(true.class, 1), Direction.RECEIVE, blk);
-      }
-    }
+	Case defaultCase(SelectorBlock[] blk) {
+		if (default_case != null) {
+			throw new DefaultCaseAlreadyDefinedError();
+		} else {
+			default_case = this.getCase(new Channel(Boolean.class, 1),
+					Direction.RECEIVE, null, blk);
+		}
+		return default_case;
+	}
 
-    public void timeout(final long t, SelectorBlock[] blk) {
-    	final Channel s = new Channel(true.class, 1);
-    	go(new Runnable() {
+	void timeout(final long t, SelectorBlock[] blk) {
+		final Channel s = new Channel(Boolean.class, 1);
+		Hoare.go(new Runnable() {
 			@Override
 			public void run() {
-				Thread.sleep(t); s.send(true); s.close;
+				Thread.sleep(t);
+				s.send(true);
+				s.close();
 			}
 		});
-    	add_case(s, timeout, blk);
-    }
+		add_case(s, Direction.TIMEOUT, null, blk);
+	}
 
-    public Case getCase(Channel chan, Direction direction, Object value/*=null*/, blk) {
-      if (direction != Direction.SEND && direction != Direction.RECEIVE) {
-    	  throw new InvalidDirectionError();
-      }
-      add_case(chan, direction, value, blk);
-    }
+	Case getCase(Channel chan, Direction direction, Object value/* =null */,
+			SelectorBlock[] blk) {
+		if (direction != Direction.SEND && direction != Direction.RECEIVE) {
+			throw new InvalidDirectionError();
+		}
+		return add_case(chan, direction, value, blk);
+	}
 
-    public void select() {
+	void select() {
       if (selected) {
     	  throw new AlreadySelectedError();
       }
@@ -89,7 +104,7 @@ public class Selector {
       try {
 	      if (!ordered_cases.isEmpty()) {
 	        for (Case cse : ordered_cases) {
-	          if (cse.getDirection() == Direction.SEND) {
+	          if (cse.direction == Direction.SEND) {
 	            operations.put(cse.channel, cse.channel.send(cse.value/*, :uuid => cse.uuid,
 	                                                                    :blocking_once => @blocking_once,
 	                                                                    :notifier => @notifier,
@@ -98,7 +113,7 @@ public class Selector {
 	            operations.put(cse.channel, cse.channel.receive(/*:uuid => cse.uuid,
 	                                                            :blocking_once => @blocking_once,
 	                                                            :notifier => @notifier,
-	                                                            :deferred => true*/);
+	                                                            :deferred => true*/));
 	          }
 	        }
 
@@ -108,7 +123,7 @@ public class Selector {
 
 	        notifier.wait();
 
-	        execute_case(notifier.payload);
+	        execute_case(notifier.getPayload());
 	      }
       } finally {
     	  selected = true;
@@ -117,43 +132,44 @@ public class Selector {
       }
     }
 
-
-    protected void dequeue_operations() {
-    	for (Entry<Channel, Operation> entry : operations) {
+	protected void dequeue_operations() {
+		for (Entry<Channel, Operation[]> entry : operations.entrySet()) {
 			entry.getKey().remove_operations(entry.getValue());
 		}
-    }
+	}
 
-    protected void close_default_channel() {
-      if (default_case != null) {
-    	  default_case.channel.close();
-      }
-    }
+	protected void close_default_channel() {
+		if (default_case != null) {
+			default_case.channel.close();
+		}
+	}
 
-    protected Case add_case(Channel chan, Direction direction, Object value/*=nil*/, SelectorBlock blk) {
-    	UUID uuid = UUID.randomUUID();
-    	Case cse = new Case(uuid, chan, direction, value, blk)
-    	ordered_cases.add(cse);
-    	cases.put(uuid, cse);
-    	operations.put(chan, new ArrayList());
-    	return cse;
-    }
+	protected Case add_case(Channel chan, Direction direction,
+			Object value/* =nil */, SelectorBlock[] blk) {
+		UUID uuid = UUID.randomUUID();
+		Case cse = new Case(uuid, chan, direction, value, blk);
+		ordered_cases.add(cse);
+		cases.put(uuid, cse);
+		operations.put(chan, new Operation[0]);
+		return cse;
+	}
 
-    protected void execute_case(Operation operation) {
-      if (operation.isClosed()) {
-    	  throw new ChannelClosedError();
-      }
+	protected void execute_case(Operation operation) {
+		if (operation.isClosed()) {
+			throw new ChannelClosedError();
+		}
 
-      Case cse = cases.get(operation.getUUID());
-//      blk, direction = cse.blk, cse.direction
+		Case cse = cases.get(operation.getUUID());
+		// blk, direction = cse.blk, cse.direction
 
-      if (cse.blk != null) {
-        if (direction == Direction.SEND || direction == Direction.TIMEOUT) {
-        	cse.blk.call();
-        } else { // RECEIVE
-        	cse.blk.call(operation.getObject());
-        }
-      }
-    }
+		if (cse.blk != null) {
+			if (cse.direction == Direction.SEND
+					|| cse.direction == Direction.TIMEOUT) {
+				cse.blk.call();
+			} else { // RECEIVE
+				cse.blk.call(operation.getObject());
+			}
+		}
+	}
 
 }

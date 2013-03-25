@@ -1,4 +1,4 @@
-package hoare.examples;
+package hoare;
 
 import static hoare.Hoare.go;
 

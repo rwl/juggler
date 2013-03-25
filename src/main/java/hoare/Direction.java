@@ -1,5 +1,5 @@
 package hoare;
 
 public enum Direction {
-	SEND, RECEIVE, BIDIRECTIONAL
+	SEND, RECEIVE, BIDIRECTIONAL, TIMEOUT
 }

@@ -1,6 +1,6 @@
 package hoare;
 
-public class Once {
+class Once {
 
 	public static final String ERROR_MSG = "already performed";
 

@@ -1,6 +1,6 @@
 package hoare;
 
-public class Error extends java.lang.Error {
+class Error extends java.lang.Error {
 
 	private static final long serialVersionUID = 7443775691909110183L;
 

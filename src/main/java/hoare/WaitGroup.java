@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import hoare.errors.NegativeWaitGroupCountError;
 
-public class WaitGroup {
+class WaitGroup {
 
 	private int count;
 

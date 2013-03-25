@@ -2,7 +2,7 @@ package hoare;
 
 import hoare.errors.Rollback;
 
-public class BlockingOnce extends Once {
+class BlockingOnce extends Once {
 
 	private Error rollback_error;
 

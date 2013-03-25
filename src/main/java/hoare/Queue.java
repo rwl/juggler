@@ -1,16 +1,21 @@
 package hoare;
 
+import hoare.errors.ChannelClosedError;
+import hoare.errors.UntypedError;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public abstract class Queue {
+abstract class Queue {
 
-	private Class<?> type;
-	private List queue;
-	private List operations;
-	private List pushes;
-	private List pops;
-	private Object mutex;
+	protected Class<?> type;
+	protected List<Object> queue;
+	protected LinkedList<Operation> operations;
+	protected LinkedList<Push> pushes;
+	protected LinkedList<Pop> pops;
+	protected Object mutex;
 
 	private boolean closed;
 
@@ -20,16 +25,16 @@ public abstract class Queue {
 		if (type == null) {
 			throw new UntypedError();
 		}
-		if (!(type.isAssignableFrom(Module.class))) {
-			throw new InvalidTypeError();
-		}
+//		if (!(type.isAssignableFrom(Module.class))) {
+//			throw new InvalidTypeError();
+//		}
 
 		this.closed = false;
 
 		this.queue = new ArrayList();
-		this.operations = new ArrayList();
-		this.pushes = new ArrayList();
-		this.pops = new ArrayList();
+		this.operations = new LinkedList<Operation>();
+		this.pushes = new LinkedList<Push>();
+		this.pops = new LinkedList<Pop>();
 
 		this.mutex = new Object();
 
@@ -50,8 +55,8 @@ public abstract class Queue {
         	throw new ChannelClosedError();
         }
         closed = true;
-        for (Object o : operations) {
-        	o.close;
+        for (Operation o : operations) {
+        	o.close();
         }
         operations.clear();
         queue.clear();
@@ -93,7 +98,7 @@ public abstract class Queue {
     }
 
     public Pop pop(Map options/*={}*/) {
-      pop = new Pop(options);
+    	Pop pop = new Pop(options);
 
       synchronized (mutex) {
         if (closed) {
@@ -108,8 +113,8 @@ public abstract class Queue {
     	  return pop;
       }
 
-      boolean ok = pop.wait();
-      return pop.object, ok;
+      boolean ok = pop.await();
+      return pop.getObject();//, ok;
     }
 
     public void remove_operations(Operation[] ops) {
@@ -127,9 +132,9 @@ public abstract class Queue {
 
         for (Object operation : operations) {
           if (operation instanceof Push) {
-            pushes.add(operation);
+            pushes.add((Push) operation);
           } else {
-            pops.add(operation);
+            pops.add((Pop) operation);
           }
         }
 
