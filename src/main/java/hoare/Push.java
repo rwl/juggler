@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.SerializationUtils;
 
-final class Push implements Operation {
+final class Push<T/* extends Serializable*/> implements Operation<T> {
 
 	public interface PushBlock {
 		void yield(byte[] obj);
@@ -28,7 +28,12 @@ final class Push implements Operation {
 	private boolean sent;
 	private boolean closed;
 
-	public Push(Serializable obj, UUID uuid, BlockingOnce blocking_once, Notifier notifier) {
+	public Push(T obj) {
+		this(obj, null, null, null);
+	}
+
+	public Push(T obj, UUID uuid, BlockingOnce blocking_once,
+			Notifier notifier) {
 		this.object = SerializationUtils.serialize(obj);
 		this.uuid = uuid == null ? UUID.randomUUID() : uuid;
 		this.blocking_once = blocking_once;
@@ -48,61 +53,61 @@ final class Push implements Operation {
 		return false;
 	}
 
-    public void await() {
-    	mutex.lock();
-      try {
-        while (!(sent || closed)) {
-          cvar.await();
-        }
-        if (closed) {
-        	throw new ChannelClosedError();
-        }
-      } catch (InterruptedException e) {
-    	  Thread.currentThread().interrupt();
-	} finally {
-    	  mutex.unlock();
-      }
-    }
+	public void await() {
+		mutex.lock();
+		try {
+			while (!(sent || closed)) {
+				cvar.await();
+			}
+			if (closed) {
+				throw new ChannelClosedError();
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		} finally {
+			mutex.unlock();
+		}
+	}
 
-    public void receive(final PushBlock pushBlock) throws Error {
-    	mutex.lock();
-      try {
-        if (closed) {
-        	throw new ChannelClosedError();
-        }
+	public void receive(final PushBlock pushBlock) throws Error {
+		mutex.lock();
+		try {
+			if (closed) {
+				throw new ChannelClosedError();
+			}
 
-        if (blocking_once != null) {
-          try {
-        	  blocking_once.perform(new Performable() {
-				@Override
-				public Object perform() {
-		        	  pushBlock.yield(object);
-		            sent = true;
-		            cvar.signal();
-		            if (notifier != null) {
-		            	notifier.notify(this);
-		            }
-					return null;
+			if (blocking_once != null) {
+				try {
+					blocking_once.perform(new Performable() {
+						@Override
+						public Object perform() {
+							pushBlock.yield(object);
+							sent = true;
+							cvar.signal();
+							if (notifier != null) {
+								notifier.notify(this);
+							}
+							return null;
+						}
+					});
+				} catch (Error error) {
+					throw error;
 				}
-			});
-          } catch (Error error) {
-          throw error;
-          }
-        } else {
-          try {
-        	  pushBlock.yield(object);
-            sent = true;
-            cvar.signal();
-            if (notifier != null) {
-            	notifier.notify(this);
-            }
-          } catch (Rollback e) {
-          }
-        }
-      } finally {
-    	  mutex.unlock();
-      }
-    }
+			} else {
+				try {
+					pushBlock.yield(object);
+					sent = true;
+					cvar.signal();
+					if (notifier != null) {
+						notifier.notify(this);
+					}
+				} catch (Rollback e) {
+				}
+			}
+		} finally {
+			mutex.unlock();
+		}
+	}
 
 	@Override
 	public void close() {

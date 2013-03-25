@@ -1,7 +1,6 @@
 package hoare;
 
 import hoare.errors.InvalidQueueSizeError;
-import hoare.errors.InvalidTypeError;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,26 +9,28 @@ class Queues {
 
 	private static final Object LOCK = new Object();
 
-	private static final Map<String, Queue> queues = new HashMap<String, Queue>();
+	private static final Map<String, Queue<?>> queues = new HashMap<String, Queue<?>>();
 
 	private Queues() {
 	}
 
-	public static Queue register(String name, Class<?> type, int max) {
+	public static <T> Queue<T> register(String name, int max) {
 		// raise Errors::Untyped unless type
 		// raise Errors::InvalidType unless type.is_a?(Module)
 
 		synchronized (LOCK) {
-			Queue queue = queues.get(name);
+			@SuppressWarnings("unchecked")
+			Queue<T> queue = (Queue<T>) queues.get(name);
 
 			if (queue != null) {
-				if (queue.type.equals(type)) {
-					return queue;
-				} else {
-					throw new InvalidTypeError(String.format(
-							"Type %s is different than the queue's type (%s)",
-							type.getName(), queue.type.getName()));
-				}
+				return queue;
+//				if (queue.type.equals(type)) {
+//					return queue;
+//				} else {
+//					throw new InvalidTypeError(String.format(
+//							"Type %s is different than the queue's type (%s)",
+//							type.getName(), queue.type.getName()));
+//				}
 			}
 
 			if (max < 0) {
@@ -37,9 +38,9 @@ class Queues {
 			}
 
 			if (max > 0) {
-				queues.put(name, new Buffered(type, max));
+				queues.put(name, new Buffered<T>(max));
 			} else {
-				queues.put(name, new Unbuffered(type));
+				queues.put(name, new Unbuffered<T>());
 			}
 
 			return queue;
@@ -52,9 +53,11 @@ class Queues {
 		}
 	}
 
-	public static Queue get(String name) {
+	public static <T> Queue<T> get(String name) {
 		synchronized (LOCK) {
-			return queues.get(name);
+			@SuppressWarnings("unchecked")
+			Queue<T> queue = (Queue<T>) queues.get(name);
+			return queue;
 		}
 	}
 

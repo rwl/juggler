@@ -2,7 +2,7 @@ package hoare;
 
 import java.util.UUID;
 
-interface Operation {
+interface Operation<T> {
 
 	boolean isClosed();
 

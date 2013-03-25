@@ -69,18 +69,22 @@ public class Selector {
 		if (default_case != null) {
 			throw new DefaultCaseAlreadyDefinedError();
 		} else {
-			default_case = this.getCase(new Channel(Boolean.class, 1),
+			default_case = this.getCase(new Channel<Boolean>(1),
 					Direction.RECEIVE, null, blk);
 		}
 		return default_case;
 	}
 
 	void timeout(final long t, SelectorBlock[] blk) {
-		final Channel s = new Channel(Boolean.class, 1);
+		final Channel<Boolean> s = new Channel<Boolean>(1);
 		Hoare.go(new Runnable() {
 			@Override
 			public void run() {
-				Thread.sleep(t);
+				try {
+					Thread.sleep(t);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
 				s.send(true);
 				s.close();
 			}

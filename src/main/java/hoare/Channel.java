@@ -2,43 +2,45 @@ package hoare;
 
 import hoare.errors.ChannelClosedError;
 import hoare.errors.InvalidDirectionError;
-import hoare.errors.InvalidTypeError;
 
-import java.util.Map;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.UUID;
 
-public class Channel {
+public class Channel<T> implements Serializable {
+
+	private static final long serialVersionUID = 8376740498686707230L;
 
 	private String name;
 	private Direction direction;
-	private Class<?> type;
 	private int max;
 
 	private boolean closed;
 	private Object close_mutex;
-	private Queue queue;
+	private Queue<T> queue;
 
-	public Channel(Class<?> type) {
-		this(type, 0);
+	public Channel() {
+		this(0);
 	}
 
-	public Channel(Class<?> type, int max) {
-		this(null, null, type, max);
+	public Channel(int max) {
+		this(null, null, max);
 	}
 
-	public Channel(String name, Direction direction, Class<?> type, int max) {
-		this.type = type;
+	public Channel(String name, Direction direction, int max) {
 		this.max = max;
 		this.closed = false;
 		this.name = name == null ? UUID.randomUUID().toString() : name;
 		this.direction = direction == null ? Direction.BIDIRECTIONAL
 				: direction;
 		this.close_mutex = new Object();
-		this.queue = Queues.register(this.name, this.type, this.max);
+		this.queue = Queues.<T>register(this.name, this.max);
 	}
 
-	public Queue getQueue() {
-		Queue q = this.queue;
+	public Queue<T> getQueue() {
+		Queue<T> q = this.queue;
 		if (q == null) {
 			throw new ChannelClosedError();
 		}
@@ -47,52 +49,56 @@ public class Channel {
 
 	// Serialization methods
 
-	public Channel marshal_load(boolean closed, String name, int max,
-			Class<?> type, Direction direction) {
-		this.closed = closed;
-		this.name = name;
-		this.max = max;
-		this.type = type;
-		this.direction = direction;
-		this.queue = Queues.get(this.name);
-		this.closed = this.queue == null || this.queue.isClosed();
-		return this;
-	}
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        out.writeBoolean(closed);
+        out.writeUTF(name);
+        out.writeInt(max);
+        out.writeObject(direction);
+    }
 
-	public Object[] marshal_dump() {
-		return new Object[] { closed, name, max, type, direction };
-	}
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+		closed = in.readBoolean();
+		name = in.readUTF();
+		max = in.readInt();
+		direction = (Direction) in.readObject();
+		queue = Queues.get(name);
+		closed = queue == null || queue.isClosed();
+    }
 
 	// Sending methods
 
-	public void send(Object object, Map options/* ={} */) {
+	public void send(T object/*, Map options*/) {
 		check_direction(Direction.SEND);
-		queue.push(object, options);
+		queue.push(object/*, options*/);
 	}
 
-	public void push(Object object, Map options/* ={} */) {
-		send(object, options);
+	public void push(T object/*, Map options*/) {
+		send(object/*, options*/);
 	}
 
-	public boolean push() {
-		return queue.push();
+	public boolean pushable() {
+		return queue.pushable();
 	}
 
 	public boolean send() {
-		return push();
+		return pushable();
 	}
 
 	// Receiving methods
 
-	public Object receive(Map options/* ={} */) {
+	public T receive(/*Map options*/) {
 		check_direction(Direction.RECEIVE);
-		return queue.pop(options);
+		return queue.pop(/*options*/);
+	}
+
+	public T pop() {
+		return receive();
 	}
 
 	// alias :pop :receive
 
-	public boolean pop() {
-		return queue.pop();
+	public boolean poppable() {
+		return queue.poppable();
 	}
 
 	// alias :receive? :pop?
@@ -119,35 +125,29 @@ public class Channel {
 		return !closed;
 	}
 
-	public void remove_operations(Operation... operations) {
+	public void remove_operations(Operation<T>... operations) {
 		// ugly, but it overcomes the race condition without synchronization
 		// since instance variable access is atomic.
-		Queue q = this.queue;
+		Queue<T> q = this.queue;
 		if (q != null) {
 			q.remove_operations(operations);
 		}
 	}
 
-	public Channel as_send_only() {
+	public Channel<T> as_send_only() {
 		return as_direction_only(Direction.SEND);
 	}
 
-	public Channel as_receive_only() {
+	public Channel<T> as_receive_only() {
 		return as_direction_only(Direction.RECEIVE);
 	}
 
-	private Channel as_direction_only(Direction direction) {
+	private Channel<T> as_direction_only(Direction direction) {
 		synchronized (close_mutex) {
 			if (closed) {
 				throw new ChannelClosedError();
 			}
-			return new Channel(name, direction, type, max);
-		}
-	}
-
-	private void check_type(Object object) {
-		if (!(object.getClass().equals(type))) {
-			throw new InvalidTypeError();
+			return new Channel<T>(name, direction, max);
 		}
 	}
 
@@ -168,9 +168,9 @@ public class Channel {
 		return direction;
 	}
 
-	public Class<?> getType() {
-		return type;
-	}
+//	public Class<?> getType() {
+//		return T;
+//	}
 
 	public int getMax() {
 		return max;

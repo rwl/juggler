@@ -4,14 +4,10 @@ import hoare.Pop.PopBlock;
 import hoare.Push.PushBlock;
 import hoare.errors.Rollback;
 
-public class Unbuffered extends Queue {
+public class Unbuffered<T> extends Queue<T> {
 
 	private int waiting_pushes;
 	private int waiting_pops;
-
-	public Unbuffered(Class<?> type) {
-		super(type);
-	}
 
 	@Override
 	public boolean isBuffered() {

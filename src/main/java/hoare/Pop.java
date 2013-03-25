@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.SerializationUtils;
 
-final class Pop implements Operation {
+final class Pop<T/* extends Serializable*/> implements Operation<T> {
 
 	public interface PopBlock {
 		byte[] yield();
@@ -27,6 +27,10 @@ final class Pop implements Operation {
 	private Condition cvar;
 	private boolean received;
 	private boolean closed;
+
+	public Pop() {
+		this(null, null, null);
+	}
 
 	public Pop(UUID uuid, BlockingOnce blocking_once, Notifier notifier) {
 		this.object = null;
@@ -129,5 +133,9 @@ final class Pop implements Operation {
 	@Override
 	public UUID getUUID() {
 		return uuid;
+	}
+
+	public T getObject() {
+		return object;
 	}
 }

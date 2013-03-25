@@ -1,151 +1,152 @@
 package hoare;
 
 import hoare.errors.ChannelClosedError;
-import hoare.errors.UntypedError;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
-abstract class Queue {
+abstract class Queue<T> {
 
-	protected Class<?> type;
-	protected List<Object> queue;
-	protected LinkedList<Operation> operations;
-	protected LinkedList<Push> pushes;
-	protected LinkedList<Pop> pops;
+	protected List<T> queue;
+	protected LinkedList<Operation<T>> operations;
+	protected LinkedList<Push<T>> pushes;
+	protected LinkedList<Pop<T>> pops;
 	protected Object mutex;
 
 	private boolean closed;
 
-	public Queue(Class<?> type) {
-		this.type = type;
-
-		if (type == null) {
-			throw new UntypedError();
-		}
-//		if (!(type.isAssignableFrom(Module.class))) {
-//			throw new InvalidTypeError();
-//		}
+	public Queue() {
+		// if (type == null) {
+		// throw new UntypedError();
+		// }
+		// if (!(type.isAssignableFrom(Module.class))) {
+		// throw new InvalidTypeError();
+		// }
 
 		this.closed = false;
 
-		this.queue = new ArrayList();
-		this.operations = new LinkedList<Operation>();
-		this.pushes = new LinkedList<Push>();
-		this.pops = new LinkedList<Pop>();
+		this.queue = new ArrayList<T>();
+		this.operations = new LinkedList<Operation<T>>();
+		this.pushes = new LinkedList<Push<T>>();
+		this.pops = new LinkedList<Pop<T>>();
 
 		this.mutex = new Object();
 
 		reset_custom_state();
 	}
 
-    public abstract boolean isBuffered();
+	public abstract boolean isBuffered();
 
-    public abstract boolean isUnbuffered();
+	public abstract boolean isUnbuffered();
 
-    public abstract boolean pop();
+	public abstract boolean poppable();
 
-    public abstract boolean push();
+	public abstract boolean pushable();
 
-    public void close() {
-      synchronized (mutex) {
-        if (closed) {
-        	throw new ChannelClosedError();
-        }
-        closed = true;
-        for (Operation o : operations) {
-        	o.close();
-        }
-        operations.clear();
-        queue.clear();
-        pushes.clear();
-        pops.clear();
+	public void close() {
+		synchronized (mutex) {
+			if (closed) {
+				throw new ChannelClosedError();
+			}
+			closed = true;
+			for (Operation<T> o : operations) {
+				o.close();
+			}
+			operations.clear();
+			queue.clear();
+			pushes.clear();
+			pops.clear();
 
-        reset_custom_state();
-      }
-    }
+			reset_custom_state();
+		}
+	}
 
-    public boolean isClosed() {
-    	return closed;
-    }
+	public boolean isClosed() {
+		return closed;
+	}
 
-    public boolean isOpen() {
-    	return !closed;
-    }
+	public boolean isOpen() {
+		return !closed;
+	}
 
-    public Push push(Object object, Map options/*={}*/) {
-//      raise Errors::InvalidType unless object.is_a?(@type)
+	public Push<T> push(T object) {
+		return push(object, false);
+	}
 
-    	Push push = new Push(object, options);
+	public Push<T> push(T object, boolean deferred/* , Map options */) {
 
-      synchronized (mutex) {
-        if (closed) {
-        	throw new ChannelClosedError();
-        }
-        operations.add(push);
-        pushes.add(push);
-        process();
-      }
+		Push<T> push = new Push<T>(object/* , options */);
 
-      if (options.get("deferred")) {
-    	  return push;
-      }
+		synchronized (mutex) {
+			if (closed) {
+				throw new ChannelClosedError();
+			}
+			operations.add(push);
+			pushes.add(push);
+			process();
+		}
 
-      push.wait();
-      return push;
-    }
+		if (deferred) {
+			return push;
+		}
 
-    public Pop pop(Map options/*={}*/) {
-    	Pop pop = new Pop(options);
+		push.await();
+		return push;
+	}
 
-      synchronized (mutex) {
-        if (closed) {
-        	throw new ChannelClosedError();
-        }
-        operations.add(pop);
-        pops.add(pop);
-        process();
-      }
+//	public T pop() {
+//		return pop(false);
+//	}
 
-      if (options.get("deferred")) {
-    	  return pop;
-      }
+	public T pop(/*boolean deferred*//* , Map options */) {
+		Pop<T> pop = new Pop<T>(/* options */);
 
-      boolean ok = pop.await();
-      return pop.getObject();//, ok;
-    }
+		synchronized (mutex) {
+			if (closed) {
+				throw new ChannelClosedError();
+			}
+			operations.add(pop);
+			pops.add(pop);
+			process();
+		}
 
-    public void remove_operations(Operation[] ops) {
-      synchronized (mutex) {
-        if (closed) {
-        	return;
-        }
+//		if (deferred) {
+//			return pop;
+//		}
 
-        for (Object operation : ops) {
-          operations.remove(operation);
-        }
+		boolean ok = pop.await();
+		return pop.getObject();// , ok;
+	}
 
-        pushes.clear();
-        pops.clear();
+	public void remove_operations(Operation<T>[] ops) {
+		synchronized (mutex) {
+			if (closed) {
+				return;
+			}
 
-        for (Object operation : operations) {
-          if (operation instanceof Push) {
-            pushes.add((Push) operation);
-          } else {
-            pops.add((Pop) operation);
-          }
-        }
+			for (Object operation : ops) {
+				operations.remove(operation);
+			}
 
-        reset_custom_state();
-      }
-    }
+			pushes.clear();
+			pops.clear();
 
+			for (Operation<T> operation : operations) {
+				if (operation instanceof Push) {
+					pushes.add((Push<T>) operation);
+				} else {
+					pops.add((Pop<T>) operation);
+				}
+			}
 
-    protected void reset_custom_state() {
-      // implement in subclass...or not...
-    }
+			reset_custom_state();
+		}
+	}
 
-    protected abstract void process();
+	protected void reset_custom_state() {
+		// implement in subclass...or not...
+	}
+
+	protected abstract void process();
 }

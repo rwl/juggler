@@ -6,7 +6,7 @@ import hoare.Channel;
 public class ProducerConsumer {
 
 	public static void main(String[] args) {
-		final Channel c = new Channel(Integer.class);
+		final Channel<Integer> c = new Channel<Integer>();
 
 		go(new Runnable() {
 			@Override

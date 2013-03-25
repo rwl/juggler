@@ -4,17 +4,12 @@ import hoare.Pop.PopBlock;
 import hoare.Push.PushBlock;
 import hoare.errors.InvalidQueueSizeError;
 
-public class Buffered extends Queue {
+public class Buffered<T> extends Queue<T> {
 
 	private int size;
 	private int max;
 
-	public Buffered(Class<?> type) {
-		this(type, 1);
-	}
-
-	public Buffered(Class<?> type, int max) {
-		super(type);
+	public Buffered(int max) {
 		if (max < 1) {
 			throw new InvalidQueueSizeError("queue size must be at least 1");
 		}
@@ -32,12 +27,12 @@ public class Buffered extends Queue {
 	}
 
 	@Override
-	public boolean push() {
+	public boolean pushable() {
 		return max > size;
 	}
 
 	@Override
-	public boolean pop() {
+	public boolean poppable() {
 		return size > 0;
 	}
 
@@ -48,15 +43,16 @@ public class Buffered extends Queue {
 
 	@Override
 	protected void process() {
-		if ((pops.isEmpty() && !push()) || (pushes.isEmpty() && !pop())) {
+		if ((pops.isEmpty() && !pushable())
+				|| (pushes.isEmpty() && !poppable())) {
 			return;
 		}
 
-		Operation operation = operations.getFirst();
+		Operation<T> operation = operations.getFirst();
 		while (true) {
 			if (operation instanceof Push) {
-				if (push()) {
-					((Push) operation).receive(new PushBlock() {
+				if (pushable()) {
+					((Push<T>) operation).receive(new PushBlock() {
 						@Override
 						public void yield(byte[] obj) {
 							size += 1;
@@ -66,14 +62,14 @@ public class Buffered extends Queue {
 
 					operations.remove(operation);
 					pushes.remove(operation);
-				} else if (pop() && operation.equals(pops.getFirst())) {
+				} else if (poppable() && operation.equals(pops.getFirst())) {
 					continue;
 				} else {
 					break;
 				}
 			} else { // Pop
-				if (pop()) {
-					((Pop) operation).send(new PopBlock() {
+				if (poppable()) {
+					((Pop<T>) operation).send(new PopBlock() {
 						@Override
 						public byte[] yield() {
 							size -= 1;
@@ -82,14 +78,14 @@ public class Buffered extends Queue {
 					});
 					operations.remove(operation);
 					pops.remove(operation);
-				} else if (push() && operation.equals(pushes.getFirst())) {
+				} else if (pushable() && operation.equals(pushes.getFirst())) {
 					continue;
 				} else {
 					break;
 				}
 			}
 
-			operation = operations.get(0);
+			operation = operations.getFirst();
 			if (operation == null) {
 				break;
 			}
