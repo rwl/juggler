@@ -20,12 +20,12 @@ public class Unbuffered<T> extends Queue<T> {
 	}
 
 	@Override
-	public boolean push() {
+	public boolean pushable() {
 		return waiting_pops > 0;
 	}
 
 	@Override
-	public boolean pop() {
+	public boolean poppable() {
 		return waiting_pushes > 0;
 	}
 

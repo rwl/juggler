@@ -1,6 +1,6 @@
 package juggler;
 
-public class RemoveOperationsBufferedQueueTest extends BufferedQueueTest {
+public class RemoveOperationsUnbufferedTest extends UnbufferedTest {
 
     Push<String>[] pushes;
 
@@ -20,8 +20,8 @@ public class RemoveOperationsBufferedQueueTest extends BufferedQueueTest {
         while (queue.poppable()) {
             String i = queue.pop();
             assertNotNull(i);
-            assertTrue(i != "6");
-            assertTrue(i != "7");
+            assertFalse(i == "6");
+            assertFalse(i == "7");
         }
     }
 }

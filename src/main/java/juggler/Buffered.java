@@ -95,4 +95,8 @@ public class Buffered<T> extends Queue<T> {
     int size() {
         return size;
     }
+
+    int max() {
+        return max;
+    }
 }
