@@ -1,11 +1,11 @@
 package juggler;
 
-class Once {
+class Once<T> {
 
 	public static final String ERROR_MSG = "already performed";
 
-	public interface Performable {
-		public Object perform();
+	public interface Performable<U> {
+		public U perform();
 	}
 
 	protected Object mutex;
@@ -34,7 +34,7 @@ class Once {
       return yield, null;
     }*/
 
-	public Object perform(Performable performable) throws Error {
+	public T perform(Performable<T> performable) throws Error {
 		// optimium path
 		if (performed) {
 			throw error();
