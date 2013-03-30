@@ -9,7 +9,24 @@ import java.util.UUID;
 
 import juggler.errors.ChannelClosedError;
 import juggler.errors.InvalidDirectionError;
+import juggler.errors.ReceiveError;
 
+/**
+ * A channel provides a mechanism for two concurrently executing functions to
+ * synchronize execution and communicate by passing a value of a specified element
+ * type. The value of an uninitialized channel is null.
+ *
+ * The capacity, in number of elements, sets the size of the buffer in the channel.
+ * If the capacity is greater than zero, the channel is buffered: provided the
+ * buffer is not full, sends can succeed without blocking. If the capacity is zero
+ * or absent, the communication succeeds only when both a sender and receiver are ready.
+ *
+ * One of the most important properties of Go is that a channel is a first-class
+ * value that can be allocated and passed around like any other. A common use of
+ * this property is to implement safe, parallel demultiplexing.
+ *
+ * - http://golang.org/doc/effective_go.html#chan_of_chan
+ */
 public class Channel<T> implements Serializable {
 
 	private static final long serialVersionUID = 8376740498686707230L;
@@ -30,7 +47,15 @@ public class Channel<T> implements Serializable {
 		this(null, null, max);
 	}
 
-	public Channel(String name, Direction direction, int max) {
+    public Channel(Direction direction) {
+        this(0, direction);
+    }
+
+    public Channel(int max, Direction direction) {
+        this(null, direction, max);
+    }
+
+    public Channel(String name, Direction direction, int max) {
 		this.max = max;
 		this.closed = false;
 		this.name = name == null ? UUID.randomUUID().toString() : name;
@@ -87,7 +112,7 @@ public class Channel<T> implements Serializable {
 
 	// Receiving methods
 
-	public T receive(/*Map options*/) {
+	public T receive(/*Map options*/) throws ReceiveError {
 		check_direction(Direction.RECEIVE);
 		return queue.pop(/*options*/);
 	}

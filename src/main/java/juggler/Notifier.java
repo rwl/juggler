@@ -4,9 +4,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class Notifier {
+class Notifier<T> {
 
-	private Object payload;
+	private T payload;
 
 	private Lock lock;
 	private Condition cvar;
@@ -36,7 +36,7 @@ class Notifier {
 		}
 	}
 
-	public Error notify(Object payload) {
+	public Error notify(T payload) {
 		lock.lock();
 		try {
 			if (notified) {
@@ -51,7 +51,7 @@ class Notifier {
 		}
 	}
 
-	public Object getPayload() {
+	public T getPayload() {
 		return payload;
 	}
 }

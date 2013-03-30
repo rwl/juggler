@@ -15,14 +15,14 @@ import org.apache.commons.lang.SerializationUtils;
 
 final class Pop<T/* extends Serializable*/> implements Operation<T> {
 
-	public interface PopBlock {
-		byte[] yield();
+	public interface PopBlock<U> {
+		U/*byte[]*/ yield();
 	}
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
 	private Notifier notifier;
-	private Serializable object;
+	private T/*Serializable*/ object;
 
 	private Lock mutex;
 	private Condition cvar;
@@ -68,7 +68,7 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 		return received();
 	}
 
-	public void send(final PopBlock popBlock) throws Error {
+	public void send(final PopBlock<T> popBlock) throws Error {
 		mutex.lock();
 		try {
 			if (closed) {
@@ -80,7 +80,8 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 					blocking_once.perform(new Performable() {
 						@Override
 						public Object perform() {
-							object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
+                            //object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
+                            object = popBlock.yield();
 							received = true;
 							cvar.signal();
 							if (notifier != null) {
@@ -95,7 +96,8 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 				}
 			} else {
 				try {
-					this.object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
+					//this.object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
+                    this.object = popBlock.yield();
 					this.received = true;
 					this.cvar.signal();
 					if (notifier != null) {

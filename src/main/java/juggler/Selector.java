@@ -61,7 +61,7 @@ public class Selector {
 		cases = new HashMap<UUID, Selector.Case>();
 		operations = new HashMap<Channel, Operation[]>();
 		blocking_once = new BlockingOnce();
-		notifier = new Notifier();
+		notifier = new Notifier<Operation>();
 		default_case = null;
 		selected = false;
 	}
@@ -126,7 +126,7 @@ public class Selector {
 	          default_case.channel.send(true/*, :uuid => @default_case.uuid, :blocking_once => @blocking_once, :notifier => @notifier, :deferred => true*/);
 	        }
 
-	        notifier.wait();
+	        notifier.await();
 
 	        execute_case(notifier.getPayload());
 	      }

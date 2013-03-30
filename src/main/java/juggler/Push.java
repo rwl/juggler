@@ -15,14 +15,14 @@ import org.apache.commons.lang.SerializationUtils;
 
 final class Push<T/* extends Serializable*/> implements Operation<T> {
 
-	public interface PushBlock {
-		void yield(byte[] obj);
+	public interface PushBlock<U> {
+		void yield(/*byte[]*/U obj);
 	}
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
 	private Notifier notifier;
-	private byte[] object;
+	private /*byte[]*/T object;
 
 	private Lock mutex;
 	private Condition cvar;
@@ -35,7 +35,7 @@ final class Push<T/* extends Serializable*/> implements Operation<T> {
 
 	public Push(T obj, UUID uuid, BlockingOnce blocking_once,
 			Notifier notifier) {
-		this.object = SerializationUtils.serialize(obj);
+		this.object = obj;//SerializationUtils.serialize(obj);
 		this.uuid = uuid == null ? UUID.randomUUID() : uuid;
 		this.blocking_once = blocking_once;
 		this.notifier = notifier;
@@ -70,7 +70,7 @@ final class Push<T/* extends Serializable*/> implements Operation<T> {
 		}
 	}
 
-	public void receive(final PushBlock pushBlock) throws Error {
+	public void receive(final PushBlock<T> pushBlock) throws Error {
 		mutex.lock();
 		try {
 			if (closed) {
