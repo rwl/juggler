@@ -71,12 +71,22 @@ abstract class Queue<T> {
 		return !closed;
 	}
 
-	public Push<T> push(T object) {
-		return push(object, false);
+	public Push<T> deferredPush(T object) {
+        Push<T> push = new Push<T>(object/* , options */);
+
+        synchronized (mutex) {
+            if (closed) {
+                throw new ChannelClosedError();
+            }
+            operations.add(push);
+            pushes.add(push);
+            process();
+        }
+
+        return push;
 	}
 
-	public Push<T> push(T object, boolean deferred/* , Map options */) {
-
+	public void push(T object/*, boolean deferred , Map options */) {
 		Push<T> push = new Push<T>(object/* , options */);
 
 		synchronized (mutex) {
@@ -88,17 +98,23 @@ abstract class Queue<T> {
 			process();
 		}
 
-		if (deferred) {
-			return push;
-		}
-
 		push.await();
-		return push;
 	}
 
-//	public T pop() {
-//		return pop(false);
-//	}
+	public Pop<T> deferredPop() {
+        Pop<T> pop = new Pop<T>(/* options */);
+
+        synchronized (mutex) {
+            if (closed) {
+                throw new ChannelClosedError();
+            }
+            operations.add(pop);
+            pops.add(pop);
+            process();
+        }
+
+		return pop;
+	}
 
 	public T pop(/*boolean deferred*//* , Map options */) {
 		Pop<T> pop = new Pop<T>(/* options */);
@@ -112,15 +128,11 @@ abstract class Queue<T> {
 			process();
 		}
 
-//		if (deferred) {
-//			return pop;
-//		}
-
 		boolean ok = pop.await();
 		return pop.getObject();// , ok;
 	}
 
-	public void remove_operations(Operation<T>[] ops) {
+	public void remove_operations(Operation<T>... ops) {
 		synchronized (mutex) {
 			if (closed) {
 				return;

@@ -21,7 +21,7 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
-	private Notifier notifier;
+	private Notifier<T> notifier;
 	private T/*Serializable*/ object;
 
 	private Lock mutex;
@@ -29,11 +29,19 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 	private boolean received;
 	private boolean closed;
 
-	public Pop() {
-		this(null, null, null);
-	}
+    public Pop() {
+        this(null, null, null);
+    }
 
-	public Pop(UUID uuid, BlockingOnce blocking_once, Notifier notifier) {
+    public Pop(BlockingOnce blocking_once) {
+        this(null, blocking_once, null);
+    }
+
+    public Pop(Notifier<T> notifier) {
+        this(null, null, notifier);
+    }
+
+	public Pop(UUID uuid, BlockingOnce blocking_once, Notifier<T> notifier) {
 		this.object = null;
 		this.uuid = uuid == null ? UUID.randomUUID() : uuid;
 		this.blocking_once = blocking_once;
@@ -141,4 +149,8 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 	public T getObject() {
 		return object;
 	}
+
+    boolean isReceived() {
+        return received;
+    }
 }

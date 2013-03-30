@@ -33,6 +33,14 @@ final class Push<T/* extends Serializable*/> implements Operation<T> {
 		this(obj, null, null, null);
 	}
 
+    public Push(T obj, BlockingOnce blocking_once) {
+        this(obj, null, blocking_once, null);
+    }
+
+    public Push(T obj, Notifier notifier) {
+        this(obj, null, null, notifier);
+    }
+
 	public Push(T obj, UUID uuid, BlockingOnce blocking_once,
 			Notifier notifier) {
 		this.object = obj;//SerializationUtils.serialize(obj);
