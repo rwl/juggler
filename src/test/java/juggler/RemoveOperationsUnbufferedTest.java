@@ -20,8 +20,8 @@ public class RemoveOperationsUnbufferedTest extends UnbufferedTest {
         while (queue.poppable()) {
             String i = queue.pop();
             assertNotNull(i);
-            assertFalse(i == "6");
-            assertFalse(i == "7");
+            assertFalse(i.equals("6"));
+            assertFalse(i.equals("7"));
         }
     }
 }

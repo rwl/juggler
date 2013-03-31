@@ -5,12 +5,14 @@ public class Juggler {
 	private Juggler() {
 	}
 
-	public static final void go(Runnable runnable) {
-		new Thread(runnable).run();
-	}
+	public static final Thread go(Runnable runnable) {
+		Thread th = new Thread(runnable);
+        th.run();
+        return th;
+    }
 
 
-	public static void go(Class<? extends Runnable> class1, Channel<?> clientRequests) {
-
+	public static Thread go(Class<? extends Runnable> class1, Object...args) {
+        return null;
 	}
 }
