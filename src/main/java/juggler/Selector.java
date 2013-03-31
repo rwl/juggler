@@ -1,5 +1,6 @@
 package juggler;
 
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,7 +8,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import juggler.Direction;
 import juggler.errors.AlreadySelectedError;
 import juggler.errors.BlockMissingError;
 import juggler.errors.ChannelClosedError;
@@ -15,10 +15,17 @@ import juggler.errors.DefaultCaseAlreadyDefinedError;
 import juggler.errors.InvalidDirectionError;
 
 
+/**
+ * A "select" statement chooses which of a set of possible communications will
+ * proceed. It looks similar to a "switch" statement but with the cases all
+ * referring to communication operations.
+ *
+ * - http://golang.org/doc/go_spec.html#Select_statements
+ */
 public class Selector {
 
 	public interface SelectorBlock {
-		void yield(Selector selector);
+		void yield(Selector s);
 	}
 
 	public static void select(SelectorBlock block) {
@@ -30,7 +37,7 @@ public class Selector {
 		selector.select();
 	}
 
-	private Map<UUID, Case> cases;
+	Map<UUID, Case> cases;
 
 	class Case {
 		public UUID uuid;
@@ -66,17 +73,20 @@ public class Selector {
 		selected = false;
 	}
 
-	Case defaultCase(SelectorBlock[] blk) {
+    public interface DefaultBlock {
+        public void yield();
+    }
+
+	Case defaultCase(ReceiveBlock<Boolean> blk) {
 		if (default_case != null) {
 			throw new DefaultCaseAlreadyDefinedError();
 		} else {
-			default_case = this.getCase(new Channel<Boolean>(1),
-					Direction.RECEIVE, null, blk);
+			default_case = receiveCase(new Channel<Boolean>(1), blk);
 		}
 		return default_case;
 	}
 
-	void timeout(final long t, SelectorBlock[] blk) {
+	void timeout(final long t, SelectorBlock blk) {
 		final Channel<Boolean> s = new Channel<Boolean>(1);
 		Juggler.go(new Runnable() {
 			@Override
@@ -93,13 +103,41 @@ public class Selector {
 		add_case(s, Direction.TIMEOUT, null, blk);
 	}
 
-	Case getCase(Channel chan, Direction direction, Object value/* =null */,
-			SelectorBlock[] blk) {
-		if (direction != Direction.SEND && direction != Direction.RECEIVE) {
-			throw new InvalidDirectionError();
-		}
-		return add_case(chan, direction, value, blk);
-	}
+    public interface SendBlock {
+        public void yield();
+    }
+
+    public interface ReceiveBlock<V> {
+        public void yield(V value);
+    }
+
+    public <U> Case sendCase(Channel<U> chan, U value) {
+        return add_case(chan, Direction.SEND, value, null);
+    }
+
+    public <U> Case sendCase(Channel<U> chan, U value, SendBlock blk) {
+        return add_case(chan, Direction.SEND, value, blk);
+    }
+
+    public <U> Case receiveCase(Channel<U> chan) {
+        return add_case(chan, Direction.RECEIVE, null, null);
+    }
+
+    public <U> Case receiveCase(Channel<U> chan, ReceiveBlock<U> blk) {
+        return add_case(chan, Direction.RECEIVE, null, blk);
+    }
+
+//    <U> Case kase(Channel<U> chan, Direction direction, SelectorBlock blk) {
+//        return kase(chan, direction, null, blk);
+//    }
+//
+//    <U> Case kase(Channel<U> chan, Direction direction, U value,
+//              SelectorBlock blk) {
+//		if (direction != Direction.SEND && direction != Direction.RECEIVE) {
+//			throw new InvalidDirectionError();
+//		}
+//		return add_case(chan, direction, value, blk);
+//	}
 
 	void select() {
       if (selected) {

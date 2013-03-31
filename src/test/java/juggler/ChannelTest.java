@@ -22,6 +22,12 @@ public class ChannelTest extends TestCase {
         channel = new Channel<String>();
     }
 
+    protected void tearDown() throws Exception {
+        if (channel.isOpen()) {
+            channel.close();
+        }
+    }
+
     public void testSendDirection() {
         Channel<String> c = new Channel<String>(3, Direction.SEND);
 
