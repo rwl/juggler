@@ -2,6 +2,7 @@ package juggler;
 
 import juggler.errors.Rollback;
 import junit.framework.TestCase;
+import org.apache.commons.lang.SerializationUtils;
 
 import static juggler.Juggler.go;
 
@@ -28,17 +29,17 @@ public class PopTest extends TestCase {
      * It should run multiple times.
      */
     public void testMultiRun() {
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
-                return Marshal.dump(1);
+            public byte[] yield() {
+                return SerializationUtils.serialize(1);
             }
         });
         assertTrue(pop.isReceived());
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
-                return Marshal.dump(2);
+            public byte[] yield() {
+                return SerializationUtils.serialize(2);
             }
         });
         assertTrue(pop.getObject() == 2);
@@ -60,10 +61,10 @@ public class PopTest extends TestCase {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
-                return Marshal.dump(1);
+            public byte[] yield() {
+                return SerializationUtils.serialize(1);
             }
         });
 
@@ -103,9 +104,9 @@ public class PopTest extends TestCase {
      */
     public void testRollback() {
         assertFalse(pop.isReceived());
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
+            public byte[] yield() {
                 throw new Rollback();
             }
         });

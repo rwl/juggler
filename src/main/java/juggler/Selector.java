@@ -108,18 +108,18 @@ public class Selector {
 
       try {
 	      if (!ordered_cases.isEmpty()) {
-	        for (Case cse : ordered_cases) {
-	          if (cse.direction == Direction.SEND) {
-	            operations.put(cse.channel, cse.channel.send(cse.value/*, :uuid => cse.uuid,
-	                                                                    :blocking_once => @blocking_once,
-	                                                                    :notifier => @notifier,
-	                                                                    :deferred => true*/));
-	          } else {  // :receive || :timeout
-	            operations.put(cse.channel, cse.channel.receive(/*:uuid => cse.uuid,
-	                                                            :blocking_once => @blocking_once,
-	                                                            :notifier => @notifier,
-	                                                            :deferred => true*/));
-	          }
+//	        for (Case cse : ordered_cases) {
+//	          if (cse.direction == Direction.SEND) {
+//	            operations.put(cse.channel, cse.channel.send(cse.value/*, :uuid => cse.uuid,
+//	                                                                    :blocking_once => @blocking_once,
+//	                                                                    :notifier => @notifier,
+//	                                                                    :deferred => true*/));
+//	          } else {  // :receive || :timeout
+//	            operations.put(cse.channel, cse.channel.receive(/*:uuid => cse.uuid,
+//	                                                            :blocking_once => @blocking_once,
+//	                                                            :notifier => @notifier,
+//	                                                            :deferred => true*/));
+//	          }
 	        }
 
 	        if (default_case != null) {
@@ -128,8 +128,7 @@ public class Selector {
 
 	        notifier.await();
 
-	        execute_case(notifier.getPayload());
-	      }
+//	        execute_case(notifier.getPayload());
       } finally {
     	  selected = true;
     	  close_default_channel();
@@ -168,12 +167,12 @@ public class Selector {
 		// blk, direction = cse.blk, cse.direction
 
 		if (cse.blk != null) {
-			if (cse.direction == Direction.SEND
-					|| cse.direction == Direction.TIMEOUT) {
-				cse.blk.call();
-			} else { // RECEIVE
-				cse.blk.call(operation.getObject());
-			}
+//			if (cse.direction == Direction.SEND
+//					|| cse.direction == Direction.TIMEOUT) {
+//				cse.blk.call();
+//			} else { // RECEIVE
+//				cse.blk.call(operation.getObject());
+//			}
 		}
 	}
 

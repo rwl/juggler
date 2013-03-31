@@ -1,14 +1,15 @@
 package juggler;
 
 import junit.framework.TestCase;
+import org.apache.commons.lang.SerializationUtils;
 
 public class NotifierPopTest extends TestCase {
 
-    Notifier<Long> notifier;
+    Notifier<Pop<Long>> notifier;
     Pop<Long> pop;
 
     protected void setUp() throws Exception {
-        notifier = new Notifier<Long>();
+        notifier = new Notifier<Pop<Long>>();
         pop = new Pop<Long>(notifier);
     }
 
@@ -17,10 +18,10 @@ public class NotifierPopTest extends TestCase {
      */
     public void testSendNotify() {
         assertFalse(notifier.isNotified());
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
-                return Marshal.dump(1);
+            public byte[] yield() {
+                return SerializationUtils.serialize(1);
             }
         });
         assertTrue(notifier.isNotified());

@@ -13,16 +13,16 @@ import juggler.errors.Rollback;
 
 import org.apache.commons.lang.SerializationUtils;
 
-final class Push<T/* extends Serializable*/> implements Operation<T> {
+final class Push<T extends Serializable> implements Operation<T> {
 
-	public interface PushBlock<U> {
-		void yield(/*byte[]*/U obj);
+	public interface PushBlock {
+		void yield(byte[] obj);
 	}
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
-	private Notifier notifier;
-	private /*byte[]*/T object;
+	private Notifier<Push<T>> notifier;
+	private byte[] object;
 
 	private Lock mutex;
 	private Condition cvar;
@@ -43,7 +43,7 @@ final class Push<T/* extends Serializable*/> implements Operation<T> {
 
 	public Push(T obj, UUID uuid, BlockingOnce blocking_once,
 			Notifier notifier) {
-		this.object = obj;//SerializationUtils.serialize(obj);
+		this.object = SerializationUtils.serialize(obj);
 		this.uuid = uuid == null ? UUID.randomUUID() : uuid;
 		this.blocking_once = blocking_once;
 		this.notifier = notifier;
@@ -78,7 +78,7 @@ final class Push<T/* extends Serializable*/> implements Operation<T> {
 		}
 	}
 
-	public void receive(final PushBlock<T> pushBlock) throws Error {
+	public void receive(final PushBlock pushBlock) throws Error {
 		mutex.lock();
 		try {
 			if (closed) {
@@ -94,7 +94,7 @@ final class Push<T/* extends Serializable*/> implements Operation<T> {
 							sent = true;
 							cvar.signal();
 							if (notifier != null) {
-								notifier.notify(this);
+								notifier.notify(Push.this);
 							}
 							return null;
 						}

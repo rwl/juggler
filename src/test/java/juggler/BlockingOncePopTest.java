@@ -2,6 +2,7 @@ package juggler;
 
 import juggler.errors.Rollback;
 import junit.framework.TestCase;
+import org.apache.commons.lang.SerializationUtils;
 
 public class BlockingOncePopTest extends TestCase {
 
@@ -18,27 +19,27 @@ public class BlockingOncePopTest extends TestCase {
      */
     public void testSendOnce() {
         assertFalse(blocking_once.performed());
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
-                return Marshal.dump(1);
+            public byte[] yield() {
+                return SerializationUtils.serialize(1);
             }
         });
         assertTrue(pop.isReceived());
         assertTrue(blocking_once.performed());
 
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
-                return Marshal.dump(2);
+            public byte[] yield() {
+                return SerializationUtils.serialize(2);
             }
         });
         assertTrue(pop.getObject() == 1);
 
         try {
-            pop.send(new Pop.PopBlock<Long>() {
+            pop.send(new Pop.PopBlock() {
                 @Override
-                public Long yield() {
+                public byte[] yield() {
                     throw new Error("an error");
                 }
             });
@@ -53,9 +54,9 @@ public class BlockingOncePopTest extends TestCase {
     public void testRollback() {
         assertFalse(blocking_once.performed());
         assertFalse(pop.isReceived());
-        pop.send(new Pop.PopBlock<Long>() {
+        pop.send(new Pop.PopBlock() {
             @Override
-            public Long yield() {
+            public byte[] yield() {
                 throw new Rollback();
             }
         });

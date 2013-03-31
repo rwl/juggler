@@ -13,16 +13,16 @@ import juggler.errors.Rollback;
 
 import org.apache.commons.lang.SerializationUtils;
 
-final class Pop<T/* extends Serializable*/> implements Operation<T> {
+final class Pop<T extends Serializable> implements Operation<T> {
 
-	public interface PopBlock<U> {
-		U/*byte[]*/ yield();
+	public interface PopBlock {
+		byte[] yield();
 	}
 
 	private UUID uuid;
 	private BlockingOnce blocking_once;
-	private Notifier<T> notifier;
-	private T/*Serializable*/ object;
+	private Notifier<Pop<T>> notifier;
+	private T object;
 
 	private Lock mutex;
 	private Condition cvar;
@@ -37,11 +37,11 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
         this(null, blocking_once, null);
     }
 
-    public Pop(Notifier<T> notifier) {
+    public Pop(Notifier<Pop<T>> notifier) {
         this(null, null, notifier);
     }
 
-	public Pop(UUID uuid, BlockingOnce blocking_once, Notifier<T> notifier) {
+	public Pop(UUID uuid, BlockingOnce blocking_once, Notifier<Pop<T>> notifier) {
 		this.object = null;
 		this.uuid = uuid == null ? UUID.randomUUID() : uuid;
 		this.blocking_once = blocking_once;
@@ -76,7 +76,7 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 		return received();
 	}
 
-	public void send(final PopBlock<T> popBlock) throws Error {
+	public void send(final PopBlock popBlock) throws Error {
 		mutex.lock();
 		try {
 			if (closed) {
@@ -88,12 +88,11 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 					blocking_once.perform(new Performable() {
 						@Override
 						public Object perform() {
-                            //object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
-                            object = popBlock.yield();
+                            object = (T) SerializationUtils.deserialize(popBlock.yield());
 							received = true;
 							cvar.signal();
 							if (notifier != null) {
-								notifier.notify(this);
+								notifier.notify(Pop.this);
 							}
 
 								return null;
@@ -104,12 +103,11 @@ final class Pop<T/* extends Serializable*/> implements Operation<T> {
 				}
 			} else {
 				try {
-					//this.object = (Serializable) SerializationUtils.deserialize(popBlock.yield());
-                    this.object = popBlock.yield();
+					this.object = (T) SerializationUtils.deserialize(popBlock.yield());
 					this.received = true;
 					this.cvar.signal();
 					if (notifier != null) {
-						this.notifier.notify(this);
+						notifier.notify(this);
 					}
 				} catch (Rollback e) {
 				}

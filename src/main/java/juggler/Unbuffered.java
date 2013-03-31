@@ -4,7 +4,9 @@ import juggler.Pop.PopBlock;
 import juggler.Push.PushBlock;
 import juggler.errors.Rollback;
 
-public class Unbuffered<T> extends Queue<T> {
+import java.io.Serializable;
+
+public class Unbuffered<T extends Serializable> extends Queue<T> {
 
 	private int waiting_pushes;
 	private int waiting_pops;
@@ -96,13 +98,13 @@ public class Unbuffered<T> extends Queue<T> {
 					((Pop) operation).send(new PopBlock() {
 						@Override
 						public byte[] yield() {
-							final byte[] value = null;
+							final byte[][] value = new byte[1][];
 
 							try {
 								push_operation.receive(new PushBlock() {
 									@Override
 									public void yield(byte[] v) {
-										value = v;
+										value[0] = v;
 									}
 								});
 							} catch (Error err) {
@@ -112,7 +114,7 @@ public class Unbuffered<T> extends Queue<T> {
 							waiting_pushes -= 1;
 							operations.remove(push_operation);
 							pushes.remove(push_operation);
-							return value;
+							return value[0];
 						}
 					});
 				} catch (Error err) {

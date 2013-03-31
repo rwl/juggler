@@ -1,19 +1,20 @@
 package juggler;
 
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import juggler.errors.ChannelClosedError;
 
-abstract class Queue<T> {
+abstract class Queue<T extends Serializable> {
 
-	protected List<T> queue;
+	protected List<String> queue;
 	protected LinkedList<Operation<T>> operations;
 	protected LinkedList<Push<T>> pushes;
 	protected LinkedList<Pop<T>> pops;
-	protected Object mutex;
+	protected final Object mutex;
 
 	private boolean closed;
 
@@ -27,7 +28,7 @@ abstract class Queue<T> {
 
 		this.closed = false;
 
-		this.queue = new ArrayList<T>();
+		this.queue = new ArrayList<String>();
 		this.operations = new LinkedList<Operation<T>>();
 		this.pushes = new LinkedList<Push<T>>();
 		this.pops = new LinkedList<Pop<T>>();
@@ -86,7 +87,7 @@ abstract class Queue<T> {
         return push;
 	}
 
-	public void push(T object/*, boolean deferred , Map options */) {
+	public void push(T object/*, Map options */) {
 		Push<T> push = new Push<T>(object/* , options */);
 
 		synchronized (mutex) {
@@ -116,7 +117,7 @@ abstract class Queue<T> {
 		return pop;
 	}
 
-	public T pop(/*boolean deferred*//* , Map options */) {
+	public T pop(/*, Map options */) throws Exception {
 		Pop<T> pop = new Pop<T>(/* options */);
 
 		synchronized (mutex) {
@@ -129,7 +130,10 @@ abstract class Queue<T> {
 		}
 
 		boolean ok = pop.await();
-		return pop.getObject();// , ok;
+        if (!ok) {
+            throw new Exception();
+        }
+		return pop.getObject();
 	}
 
 	public void remove_operations(Operation<T>... ops) {
@@ -139,7 +143,7 @@ abstract class Queue<T> {
 			}
 
 			for (Object operation : ops) {
-				operations.remove(operation);
+				operations.remove(operation);  // FIXME: O(n)
 			}
 
 			pushes.clear();

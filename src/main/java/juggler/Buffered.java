@@ -4,7 +4,9 @@ import juggler.Pop.PopBlock;
 import juggler.Push.PushBlock;
 import juggler.errors.InvalidQueueSizeError;
 
-public class Buffered<T> extends Queue<T> {
+import java.io.Serializable;
+
+public class Buffered<T extends Serializable> extends Queue<T> {
 
 	private int size;
 	private int max;
@@ -56,7 +58,7 @@ public class Buffered<T> extends Queue<T> {
 						@Override
 						public void yield(byte[] obj) {
 							size += 1;
-							queue.add(obj);
+							queue.add(new String(obj));
 						}
 					});
 
@@ -73,7 +75,7 @@ public class Buffered<T> extends Queue<T> {
 						@Override
 						public byte[] yield() {
 							size -= 1;
-							return queue.remove(0);
+							return queue.remove(0).getBytes();
 						}
 					});
 					operations.remove(operation);
