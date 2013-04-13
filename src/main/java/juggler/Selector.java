@@ -77,7 +77,7 @@ public class Selector {
         public void yield();
     }
 
-	Case defaultCase(ReceiveBlock<Boolean> blk) {
+	public Case defaultCase(ReceiveBlock<Boolean> blk) {
 		if (default_case != null) {
 			throw new DefaultCaseAlreadyDefinedError();
 		} else {
@@ -86,7 +86,7 @@ public class Selector {
 		return default_case;
 	}
 
-	void timeout(final long t, SelectorBlock blk) {
+	public void timeout(final long t, SelectorBlock blk) {
 		final Channel<Boolean> s = new Channel<Boolean>(1);
 		Juggler.go(new Runnable() {
 			@Override
