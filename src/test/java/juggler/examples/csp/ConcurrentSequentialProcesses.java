@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2013 Thomas Kappler
+ * Copyright (C) 2013 Richard Lincoln
+ */
 package juggler.examples.csp;
 
 import juggler.Channel;
@@ -10,59 +14,60 @@ import juggler.examples.balance.Request;
 import static juggler.Juggler.go;
 import static juggler.Selector.select;
 
-// The examples from Tony Hoare's seminal 1978 paper "Communicating
-// sequential processes" implemented in Go.
-//
-// Go's design was strongly influenced by Hoare's paper [1]. Although
-// Go differs significantly from the example language used in the
-// paper, the examples still translate rather easily. The biggest
-// difference apart from syntax is that Go models the conduits of
-// concurrent communication explicitly as channels, while the
-// processes of Hoare's language send messages directly to each other,
-// similar to Erlang. Hoare hints at this possibility in section 7.3,
-// but with the limitation that "each port is connected to exactly one
-// other port in another process", in which case it would be a mostly
-// syntactic difference.
-//
-// [1]
-// http://blog.golang.org/2010/07/share-memory-by-communicating.html
-//
-// Implementing these examples, and the careful reading of the paper
-// required to do so, were a very enlightening experience. I found the
-// iterative array of 4.2, the concurrent routines changing their
-// behavior execution of 4.5, and the highly concurrent matrix
-// multiplication of 6.2 to be particularly interesting.
-//
-// I tried to name routines and variables like in the paper, which
-// explains the now outdated upper-case names. Similarly, I tried to
-// make the function signatures as similar to the paper as possible,
-// so we mostly work directly with channels, where one would hide this
-// implementation detail in real-world code.
-//
-// The ugly name prefixes like "S33_" make godoc order the types by
-// section of the paper.
-//
-// Most of the examples have tests, although I have not taken a lot of
-// care to test corner cases. The test of the S53_DiningPhilosophers
-// is not really a test, it simply runs the routine for ten seconds so
-// you can observe the philosophers behavior (use `go test -v`).
-//
-// Thomas Kappler <tkappler@gmail.com>
+/**
+ * The examples from Tony Hoare's seminal 1978 paper "Communicating
+ * sequential processes" implemented in Go.
+ * 
+ * Go's design was strongly influenced by Hoare's paper [1]. Although
+ * Go differs significantly from the example language used in the
+ * paper, the examples still translate rather easily. The biggest
+ * difference apart from syntax is that Go models the conduits of
+ * concurrent communication explicitly as channels, while the
+ * processes of Hoare's language send messages directly to each other,
+ * similar to Erlang. Hoare hints at this possibility in section 7.3,
+ * but with the limitation that "each port is connected to exactly one
+ * other port in another process", in which case it would be a mostly
+ * syntactic difference.
+ *
+ * [1]
+ * http://blog.golang.org/2010/07/share-memory-by-communicating.html
+ *
+ * Implementing these examples, and the careful reading of the paper
+ * required to do so, were a very enlightening experience. I found the
+ * iterative array of 4.2, the concurrent routines changing their
+ * behavior execution of 4.5, and the highly concurrent matrix
+ * multiplication of 6.2 to be particularly interesting.
+ *
+ * I tried to name routines and variables like in the paper, which
+ * explains the now outdated upper-case names. Similarly, I tried to
+ * make the function signatures as similar to the paper as possible,
+ * so we mostly work directly with channels, where one would hide this
+ * implementation detail in real-world code.
+ *
+ * Most of the examples have tests, although I have not taken a lot of
+ * care to test corner cases. The test of the S53_DiningPhilosophers
+ * is not really a test, it simply runs the routine for ten seconds so
+ * you can observe the philosophers behavior.
+ *
+ * Thomas Kappler <tkappler@gmail.com>
+ */
 public class ConcurrentSequentialProcesses {
 
-    // 3.1 COPY
-    //
-    // > "Problem: Write a process X to copy characters output by process west
-    // to process, east."
-    //
-    // In Go, the communication channel between two processes (goroutines) is
-    // explicitly represented via the chan type. So we model west and east as
-    // channels of runes. In an endless loop, we read from west and write the
-    // result directly to east.
-    //
-    // As an addition to the paper's example, we stop when west is closed,
-    // otherwise we would just hang at this point. To indicate this to the
-    // client, we close the east channel.
+    /**
+     * 3.1 COPY
+     *
+     * > "Problem: Write a process X to copy characters output by process west
+     * to process, east."
+     *
+     * In Go, the communication channel between two processes (goroutines) is
+     * explicitly represented via the chan type. So we model west and east as
+     * channels of runes. In an endless loop, we read from west and write the
+     * result directly to east.
+     *
+     * As an addition to the paper's example, we stop when west is closed,
+     * otherwise we would just hang at this point. To indicate this to the
+     * client, we close the east channel.
+     */
     public static BiConsumer<Channel<Character>, Channel<Character>> S31_COPY = new BiConsumer<Channel<Character>, Channel<Character>>() {
 
         @Override
@@ -74,16 +79,18 @@ public class ConcurrentSequentialProcesses {
         }
     };
 
-    // 3.2 SQUASH
-    //
-    // > "Problem: Adapt the previous program [COPY] to replace every pair of
-    // consecutive asterisks "**" by an upward arrow "↑". Assume that the final
-    // character input is not an asterisk."
-    //
-    // If we get an asterisk from west, we receive the next character as well
-    // and then decide whether to send the upward arrow or the last two
-    // characters as-is. Go's UTF8 support allows to treat the arrow like any
-    // other character.
+    /**
+     * 3.2 SQUASH
+     *
+     * > "Problem: Adapt the previous program [COPY] to replace every pair of
+     * consecutive asterisks "**" by an upward arrow "↑". Assume that the final
+     * character input is not an asterisk."
+     *
+     * If we get an asterisk from west, we receive the next character as well
+     * and then decide whether to send the upward arrow or the last two
+     * characters as-is. Go's UTF8 support allows to treat the arrow like any
+     * other character.
+     */
     public static BiConsumer<Channel<Character>, Channel<Character>> S32_SQUASH = new BiConsumer<Channel<Character>, Channel<Character>>() {
 
         @Override
@@ -106,11 +113,13 @@ public class ConcurrentSequentialProcesses {
         }
     };
 
-    // Hoare adds a remark to 3.2 SQUASH: "(2) As an exercise, adapt this
-    // process to deal sensibly with input which ends with an odd number of
-    // asterisks." This version handles this case by sending a single asterisk
-    // from west to east if west did not supply another character after a
-    // timeout, or if west was closed in the meantime.
+    /**
+     * Hoare adds a remark to 3.2 SQUASH: "(2) As an exercise, adapt this
+     * process to deal sensibly with input which ends with an odd number of
+     * asterisks." This version handles this case by sending a single asterisk
+     * from west to east if west did not supply another character after a
+     * timeout, or if west was closed in the meantime.
+     */
     public static BiConsumer<Channel<Character>, Channel<Character>> S32_SQUASH_EXT = new BiConsumer<Channel<Character>, Channel<Character>>() {
 
         @Override
@@ -132,7 +141,7 @@ public class ConcurrentSequentialProcesses {
                             s.receiveCase(west, new Selector.ReceiveBlock<Character>() {
                                 @Override
                                 public void yield(Character c2/*, boolean ok*/) {
-                                    if (!ok) { // west closed
+                                    if (!ok) {  // west closed
                                         east.send(c);
                                         return; //break;
                                     }
@@ -152,14 +161,16 @@ public class ConcurrentSequentialProcesses {
         }
     };
 
-    // 3.3 DISASSEMBLE
-    //
-    // > "Problem: to read cards from a cardfile and output to process X the
-    // stream of characters they contain. An extra space should be inserted at
-    // the end of each card."
-    //
-    // Trivially translated to Go. We don't need to care about the indices 1 to
-    // 80, range handles this for us.
+    /**
+     * 3.3 DISASSEMBLE
+     *
+     * > "Problem: to read cards from a cardfile and output to process X the
+     * stream of characters they contain. An extra space should be inserted at
+     * the end of each card."
+     *
+     * Trivially translated to Go. We don't need to care about the indices 1 to
+     * 80, range handles this for us.
+     */
     public static BiConsumer<Channel<Character[]>, Channel<Character>> S33_DISASSEMBLE = new BiConsumer<Channel<Character[]>, Channel<Character>> () {
 
         @Override
@@ -175,11 +186,13 @@ public class ConcurrentSequentialProcesses {
         }
     };
 
-    // 3.4 ASSEMBLE
-    //
-    // > "Problem: To read a stream of characters from process X and print them
-    // in lines of 125 characters on a lineprinter. The last line should be
-    // completed with spaces if necessary."
+    /**
+     * 3.4 ASSEMBLE
+     *
+     * > "Problem: To read a stream of characters from process X and print them
+     * in lines of 125 characters on a lineprinter. The last line should be
+     * completed with spaces if necessary."
+     */
     public static BiConsumer<Channel<Character>, Channel<Character[]>> S34_ASSEMBLE = new BiConsumer<Channel<Character>, Channel<Character[]>> () {
 
         @Override
@@ -214,16 +227,18 @@ public class ConcurrentSequentialProcesses {
         }
     };
 
-    // 3.5 Reformat
-    //
-    // > "Problem: Read a sequence of cards of 80 characters each, and print
-    // the characters on a lineprinter at 125 characters per line. Every card
-    // should be followed by an extra space, and the last line should be
-    // completed with spaces if necessary."
-    //
-    // This is a great example of how easily concurrent processes can be
-    // combined in the manner Unix pipes. No extra code is required to let the
-    // data flow through the two routines we wrote earlier.
+    /**
+     * 3.5 Reformat
+     *
+     * > "Problem: Read a sequence of cards of 80 characters each, and print
+     * the characters on a lineprinter at 125 characters per line. Every card
+     * should be followed by an extra space, and the last line should be
+     * completed with spaces if necessary."
+     *
+     * This is a great example of how easily concurrent processes can be
+     * combined in the manner Unix pipes. No extra code is required to let the
+     * data flow through the two routines we wrote earlier.
+     */
     public static BiConsumer<Channel<Character[]>, Channel<Character[]>> S35_Reformat = new BiConsumer<Channel<Character[]>, Channel<Character[]>>() {
 
         @Override
@@ -234,13 +249,15 @@ public class ConcurrentSequentialProcesses {
         }
     };
 
-    // 3.6 Conway's Problem
-    //
-    // > "Problem: Adapt the above program to replace every pair of consecutive
-    // asterisks by an upward arrow."
-    //
-    // The implementation in four lines is a testament to the expressive
-    // power of modeling programs as communicating sequential processes.
+    /**
+     * 3.6 Conway's Problem
+     *
+     * > "Problem: Adapt the above program to replace every pair of consecutive
+     * asterisks by an upward arrow."
+     *
+     * The implementation in four lines is a testament to the expressive
+     * power of modeling programs as communicating sequential processes.
+     */
     public static BiConsumer<Channel<Character[]>, Channel<Character[]>> S36_Conway = new BiConsumer<Channel<Character[]>, Channel<Character[]>>() {
 
         @Override
@@ -251,27 +268,31 @@ public class ConcurrentSequentialProcesses {
             go(S32_SQUASH_EXT, pipe1, pipe2);
             S34_ASSEMBLE.run(pipe2, lineprinter);
         }
-    }
+    };
 
-    // 4. Subroutines and Data Representations
-    //
-    // > "A coroutine acting as a subroutine is a process operating
-    // concurrently with its user process in a parallel command:
-    // [subr::SUBROUTINE||X::USER]. [...] The USER will call the subroutine by
-    // a pair of commands: subr!(arguments); ...; subr?(results). Any commands
-    // between these two will be executed concurrently with the subroutine."
-    //
-    // Here the paper's influence on Go comes out clearly: coroutines are
-    // goroutines and launching them via "!" is the "go" command. Only reading
-    // the results is quite different in Go because of the explicit
-    // representation of the conduit between coroutine and main routine, the
-    // channel.
+    /**
+     * 4. Subroutines and Data Representations
+     *
+     * > "A coroutine acting as a subroutine is a process operating
+     * concurrently with its user process in a parallel command:
+     * [subr::SUBROUTINE||X::USER]. [...] The USER will call the subroutine by
+     * a pair of commands: subr!(arguments); ...; subr?(results). Any commands
+     * between these two will be executed concurrently with the subroutine."
+     *
+     * Here the paper's influence on Go comes out clearly: coroutines are
+     * goroutines and launching them via "!" is the "go" command. Only reading
+     * the results is quite different in Go because of the explicit
+     * representation of the conduit between coroutine and main routine, the
+     * channel.
+     */
 
-    // 4.1  Function: Division With Remainder
-    //
-    // > "Problem: Construct a process to represent a function-type subroutine,
-    // which accepts a positive dividend and divisor, and returns their integer
-    // quotient and remainder. Efficiency is of no concern."
+    /**
+     * 4.1  Function: Division With Remainder
+     *
+     * > "Problem: Construct a process to represent a function-type subroutine,
+     * which accepts a positive dividend and divisor, and returns their integer
+     * quotient and remainder. Efficiency is of no concern."
+     */
     public static Juggler.TriConsumer<Integer, Integer, Channel<DivResult>> S41_DIV = new Juggler.TriConsumer<Integer, Integer, Channel<DivResult>>() {
 
         @Override
@@ -294,38 +315,40 @@ public class ConcurrentSequentialProcesses {
         }
     }
 
-    // 4.2 Recursion: Factorial
-    //
-    // > "Problem: Compute a factorial by the recursive method, to a given
-    // limit."
-    //
-    // This example is fascinating. It introduces the "iterative array" which
-    // kept me puzzled for a while, but made for a great a-ha moment when I got
-    // it. It's an array of coroutines, so that for a given integer input i,
-    // the coroutine at index i knows how to deal with it. By addressing its
-    // neighbor coroutines at i-1 and i+1, a coroutine can communicate with the
-    // others to break down the overall problem. That sounds pretty abstract
-    // and will be clearer in the following examples.
-    //
-    // To compute n!, we use the simple recurrence `n! = n * (n-1)!`, with `0!
-    // = 1! = 1`. In our iterative array of goroutines, when routine i receives
-    // the value x, it sends x-1 up the chain, i.e., to the right in the
-    // iterative array. This continues until the value is 0 or 1 and we hit the
-    // base case of the recursion. The coroutines then pass values back down
-    // the chain, i.e. leftwards, starting with 1. When routine i receives a
-    // result passed back down the chain, it multiplies it with x and passes on
-    // the result. When it arrives at routine 0, n! is computed.
-    //
-    // The caller doesn't see this process. We only need to expose goroutine 0,
-    // which can compute any factorial by passing the value up the chain and
-    // waiting for the result. Any factorial up to the limit of the length of
-    // the iterative array, that is, which has to be given when creating the
-    // factorial iterative array.
-    //
-    // Go models communication between goroutines with explicit channel values,
-    // so in this implementation the iterative array is an array of channels.
-    // When we create it, we launch the corresponding goroutines at the same
-    // time.
+    /**
+     * 4.2 Recursion: Factorial
+     *
+     * > "Problem: Compute a factorial by the recursive method, to a given
+     * limit."
+     *
+     * This example is fascinating. It introduces the "iterative array" which
+     * kept me puzzled for a while, but made for a great a-ha moment when I got
+     * it. It's an array of coroutines, so that for a given integer input i,
+     * the coroutine at index i knows how to deal with it. By addressing its
+     * neighbor coroutines at i-1 and i+1, a coroutine can communicate with the
+     * others to break down the overall problem. That sounds pretty abstract
+     * and will be clearer in the following examples.
+     *
+     * To compute n!, we use the simple recurrence `n! = n * (n-1)!`, with `0!
+     * = 1! = 1`. In our iterative array of goroutines, when routine i receives
+     * the value x, it sends x-1 up the chain, i.e., to the right in the
+     * iterative array. This continues until the value is 0 or 1 and we hit the
+     * base case of the recursion. The coroutines then pass values back down
+     * the chain, i.e. leftwards, starting with 1. When routine i receives a
+     * result passed back down the chain, it multiplies it with x and passes on
+     * the result. When it arrives at routine 0, n! is computed.
+     *
+     * The caller doesn't see this process. We only need to expose goroutine 0,
+     * which can compute any factorial by passing the value up the chain and
+     * waiting for the result. Any factorial up to the limit of the length of
+     * the iterative array, that is, which has to be given when creating the
+     * factorial iterative array.
+     *
+     * Go models communication between goroutines with explicit channel values,
+     * so in this implementation the iterative array is an array of channels.
+     * When we create it, we launch the corresponding goroutines at the same
+     * time.
+     */
     public static Channel<Integer> S42_facM(int limit) {
         final Channel<Integer>[] fac = new Channel/*<Integer>(limit+1)*/[limit+1];
         fac[0] = new Channel<Integer>();
@@ -351,13 +374,15 @@ public class ConcurrentSequentialProcesses {
         return fac[0];
     }
 
-    // 4.3 Data Representation: Small Set of Integers
-    //
-    // > "Problem: To represent a set of not more than 100 integers as a
-    // process, S, which accepts two kinds of instruction from its calling
-    // process X: (1) S!insert(n), insert the integer n in the set, and (2)
-    // S!has(n); ... ; S?b, b is set true if n is in the set, and false
-    // otherwise."
+    /**
+     * 4.3 Data Representation: Small Set of Integers
+     *
+     * > "Problem: To represent a set of not more than 100 integers as a
+     * process, S, which accepts two kinds of instruction from its calling
+     * process X: (1) S!insert(n), insert the integer n in the set, and (2)
+     * S!has(n); ... ; S?b, b is set true if n is in the set, and false
+     * otherwise."
+     */
     public static class S43_IntSet {
         int[] content;
         Object/*sync.RWMutex*/ writeLock;
@@ -381,14 +406,16 @@ public class ConcurrentSequentialProcesses {
             return new S43_IntSet(new int[100]);
         }
 
-        // Send true on res if s contains n, otherwise false.
-        //
-        // The caller needs to pass in the result channel because otherwise we'd
-        // need to return a channel here to make the operation asynchronous. But
-        // what channel? If we make a new one every time, it's wasteful. If we have
-        // only one, we need to lock access to it, and we cannot close it, so the
-        // caller might wait indefinitely on it (although that would be an error in
-        // the client).
+        /**
+         * Send true on res if s contains n, otherwise false.
+         *
+         * The caller needs to pass in the result channel because otherwise we'd
+         * need to return a channel here to make the operation asynchronous. But
+         * what channel? If we make a new one every time, it's wasteful. If we have
+         * only one, we need to lock access to it, and we cannot close it, so the
+         * caller might wait indefinitely on it (although that would be an error in
+         * the client).
+         */
         public final BiConsumer<Integer, Channel<Boolean>> Has = new BiConsumer<Integer, Channel<Boolean>>() {
             @Override
             public void run(final Integer n, final Channel<Boolean> res) {
@@ -404,16 +431,18 @@ public class ConcurrentSequentialProcesses {
             }
         };
 
-        // Insert the number n into the set, if there is still room. Note that in
-        // Hoare's specification the client has no way of knowing whether the set
-        // is full or not, safe for testing whether the insertion worked with
-        // has().
-        //
-        // The client can also not know when the insertion is complete. Parallel
-        // insertions and Has() queries are protected by a mutex. But there is no
-        // guarantee that the Insert() has even started to run, i.e., actually
-        // acquired the lock. To protect against seeing stale data, the client can
-        // pass in an ack channel and block on it.
+        /**
+         * Insert the number n into the set, if there is still room. Note that in
+         * Hoare's specification the client has no way of knowing whether the set
+         * is full or not, safe for testing whether the insertion worked with
+         * has().
+         *
+         * The client can also not know when the insertion is complete. Parallel
+         * insertions and Has() queries are protected by a mutex. But there is no
+         * guarantee that the Insert() has even started to run, i.e., actually
+         * acquired the lock. To protect against seeing stale data, the client can
+         * pass in an ack channel and block on it.
+         */
         public final BiConsumer<Integer, Channel<Integer>> Insert = new BiConsumer<Integer, Channel<Integer>>() {
 
             @Override
@@ -437,16 +466,18 @@ public class ConcurrentSequentialProcesses {
             }
         };
 
-        // 4.4 Scanning a Set
-        //
-        // > "Problem: Extend the solution to 4.3 by providing a fast method for
-        // scanning all members of the set without changing the value of the set."
-        //
-        // The implementation below looks quite different from Hoare's. Go's
-        // channels in combination with `range` make the implementation trivial. An
-        // implementation closer to the pseudocode in the paper might return a chan
-        // int and a chan bool "noneleft" to the caller, sending a signal on
-        // noneleft after the iteration.
+        /**
+         * 4.4 Scanning a Set
+         *
+         * > "Problem: Extend the solution to 4.3 by providing a fast method for
+         * scanning all members of the set without changing the value of the set."
+         *
+         * The implementation below looks quite different from Hoare's. Go's
+         * channels in combination with `range` make the implementation trivial. An
+         * implementation closer to the pseudocode in the paper might return a chan
+         * int and a chan bool "noneleft" to the caller, sending a signal on
+         * noneleft after the iteration.
+         */
         public Channel<Integer> Scan() {
             final Channel<Integer> res = new Channel<Integer>();
             go(new Runnable() {
@@ -463,39 +494,50 @@ public class ConcurrentSequentialProcesses {
             return res;
         }
 
-        // 4.5 Recursive Data Representation: Small Set of Integers
-        //
-        // > "Problem: Same as above, but an array of processes is to be used to
-        // achieve a high degree of parallelism. Each process should contain at
-        // most one number. When it contains no number, it should answer "false" to
-        // all inquiries about membership. On the first insertion, it changes to a
-        // second phase of behavior, in which it deals with instructions from its
-        // predecessor, passing some of them on to its successor. The calling
-        // process will be named S(0). For efficiency, the set should be sorted,
-        // i.e. the ith process should contain the ith largest number."
-        //
-        // We use the iterative array technique from 4.2 again here.
-        //
-        // I found this exercise to be the trickiest one. The *least*
-        // operation had me puzzled for a while. I tried to make it work,
-        // analogous to the other three, with a single channel used both to
-        // communicate with the client and to communicate internally between
-        // the goroutines.
-        static class ParIntSetRes {
-            Channel<Integer> a;
-            Channel<S45_HasQuery> b;
-            Channel<Channel<Integer>> c;
-            Channel<S45_LeastQuery> d;
+        /**
+         * 4.5 Recursive Data Representation: Small Set of Integers
+         *
+         * > "Problem: Same as above, but an array of processes is to be used to
+         * achieve a high degree of parallelism. Each process should contain at
+         * most one number. When it contains no number, it should answer "false" to
+         * all inquiries about membership. On the first insertion, it changes to a
+         * second phase of behavior, in which it deals with instructions from its
+         * predecessor, passing some of them on to its successor. The calling
+         * process will be named S(0). For efficiency, the set should be sorted,
+         * i.e. the ith process should contain the ith largest number."
+         *
+         * We use the iterative array technique from 4.2 again here.
+         *
+         * I found this exercise to be the trickiest one. The *least*
+         * operation had me puzzled for a while. I tried to make it work,
+         * analogous to the other three, with a single channel used both to
+         * communicate with the client and to communicate internally between
+         * the goroutines.
+         */
+        public static class ParIntSetRes {
+            Channel<Integer> insert;
+            Channel<S45_HasQuery> has;
+            Channel<Channel<Integer>> scan;
+            Channel<S45_LeastQuery> leastQuery;
+            public ParIntSetRes(Channel<Integer> insert, Channel<S45_HasQuery> has,
+                    Channel<Channel<Integer>> scan, Channel<S45_LeastQuery> leastQuery) {
+                this.insert = insert;
+                this.has = has;
+                this.scan = scan;
+                this.leastQuery = leastQuery;
+            }
         }
 
-        public ParIntSetRes S45_ParIntSet(final int limit) {
+        public static ParIntSetRes S45_ParIntSet(final int limit) {
             final Channel<Integer>[] insert = new Channel[limit+1];
             final Channel<S45_HasQuery>[] has = new Channel[limit+1];
             final Channel<Channel<Integer>>[] scan = new Channel[limit+1];
             final Channel<S45_LeastResponse>[] least = new Channel[limit+1];
-            // Only the first one of these will actually be created and used to
-            // communicate with the client, but we make an array to be able to
-            // use the same code for all goroutines.
+            /*
+             * Only the first one of these will actually be created and used to
+             * communicate with the client, but we make an array to be able to
+             * use the same code for all goroutines.
+             */
             final Channel<S45_LeastQuery>[] leastQuery = new Channel[limit+1];
 
             for (int i = 1; i <= limit; i++) {
@@ -631,13 +673,17 @@ public class ConcurrentSequentialProcesses {
                 }, i);
             }
 
-            return insert[1], has[1], scan[1], leastQuery[1];
+            return new ParIntSetRes(insert[1], has[1], scan[1], leastQuery[1]);
         }
     }
 
     public static class S45_HasQuery {
         int N;
         Channel<Boolean> Response;
+        public S45_HasQuery(int N, Channel<Boolean> Response) {
+            this.N = N;
+            this.Response = Response;
+        }
     }
 
     public static class S45_LeastQuery extends Channel<S45_LeastResponse> {}
@@ -654,25 +700,27 @@ public class ConcurrentSequentialProcesses {
         }
     }
 
-    // 5.1 Bounded Buffer
-    //
-    // > "Problem: Construct a buffering process X to smooth variations in the
-    // speed of output of portions by a producer process and input by a
-    // consumer process. The consumer contains pairs of commands X!more( );
-    // X?p, and the producer contains commands of the form X!p. The buffer
-    // should contain up to ten portions."
-    //
-    // This is exactly what Go's buffered channels provide. We will do it
-    // manually here. Even that would be trivial using a `select` containing
-    // both the producer receive and the consumer send, so we'll do it without
-    // select. The implementation strictly follows Hoare's pseudo-code from the
-    // paper.
-    //
-    // We do actually use `select`, but only for single channel operations, in
-    // order to exploit the semantics of its `default` case: try the channel
-    // operation, but don't block if the other end isn't ready, instead just
-    // skip it and continue.
-    public static void /*consumer chan int, producer chan int*/ S51_Buffer(final int bufSize) {
+    /**
+     * 5.1 Bounded Buffer
+     *
+     * > "Problem: Construct a buffering process X to smooth variations in the
+     * speed of output of portions by a producer process and input by a
+     * consumer process. The consumer contains pairs of commands X!more( );
+     * X?p, and the producer contains commands of the form X!p. The buffer
+     * should contain up to ten portions."
+     *
+     * This is exactly what Go's buffered channels provide. We will do it
+     * manually here. Even that would be trivial using a `select` containing
+     * both the producer receive and the consumer send, so we'll do it without
+     * select. The implementation strictly follows Hoare's pseudo-code from the
+     * paper.
+     *
+     * We do actually use `select`, but only for single channel operations, in
+     * order to exploit the semantics of its `default` case: try the channel
+     * operation, but don't block if the other end isn't ready, instead just
+     * skip it and continue.
+     */
+    public static Channel<Integer>[] S51_Buffer(final int bufSize) {
         final int[] buffer = new int[bufSize];
         final Channel<Integer> consumer = new Channel<Integer>();
         final Channel<Integer> producer = new Channel<Integer>();
@@ -720,35 +768,37 @@ public class ConcurrentSequentialProcesses {
             }
         });
 
-//        return consumer, producer;
+        return new Channel[] {consumer, producer};
     }
 
-    // 5.2 Integer Semaphore
-    //
-    // > "Problem: To implement an integer semaphore, S, shared among an array
-    // X(i:I..100) of client processes. Each process may increment the
-    // semaphore by S!V() or decrement it by S!P(), but the latter command must
-    // be delayed if the value of the semaphore is not positive."
-    //
-    // This is a nice one to write using `select`. We use two channels, inc and
-    // dec, for the two operations the semaphore offers. If dec isn't possible
-    // because the semaphore is 0, the client's channel send blocks.
-    //
-    // The number of clients, 100 in the paper, doesn't matter for the inc and
-    // dec operations since, in contrast to Hoare's pseudocode, we don't need
-    // to explicitly scan all clients in the channel receive operations. We
-    // would need to know the number if we wanted to keep track of active
-    // clients and shut down the semaphore once they are all finished. I didn't
-    // implement this, but it would be easy to do with an `activeClients int`
-    // variable and a `done` channel that decrements it.
-    //
-    // A problem I faced initially was that I put both the inc and the dec
-    // receive operations into one select. This would require a guard on the
-    // dec receive, something like `case val > 0 && <- dec:`, but Go doesn't
-    // support that. So I would receive from dec, thereby acknowledging the
-    // operation to the caller, before knowing that the decrement was legal.
-    // The solution is obvious in retrospect: try the dec receive in a separate
-    // select, protected by a `val > 0` guard.
+    /**
+     * 5.2 Integer Semaphore
+     *
+     * > "Problem: To implement an integer semaphore, S, shared among an array
+     * X(i:I..100) of client processes. Each process may increment the
+     * semaphore by S!V() or decrement it by S!P(), but the latter command must
+     * be delayed if the value of the semaphore is not positive."
+     *
+     * This is a nice one to write using `select`. We use two channels, inc and
+     * dec, for the two operations the semaphore offers. If dec isn't possible
+     * because the semaphore is 0, the client's channel send blocks.
+     *
+     * The number of clients, 100 in the paper, doesn't matter for the inc and
+     * dec operations since, in contrast to Hoare's pseudocode, we don't need
+     * to explicitly scan all clients in the channel receive operations. We
+     * would need to know the number if we wanted to keep track of active
+     * clients and shut down the semaphore once they are all finished. I didn't
+     * implement this, but it would be easy to do with an `activeClients int`
+     * variable and a `done` channel that decrements it.
+     *
+     * A problem I faced initially was that I put both the inc and the dec
+     * receive operations into one select. This would require a guard on the
+     * dec receive, something like `case val > 0 && <- dec:`, but Go doesn't
+     * support that. So I would receive from dec, thereby acknowledging the
+     * operation to the caller, before knowing that the decrement was legal.
+     * The solution is obvious in retrospect: try the dec receive in a separate
+     * select, protected by a `val > 0` guard.
+     */
     static class S52_Semaphore {
         Channel<Object> inc, dec;
         public void Inc() {
@@ -793,7 +843,7 @@ public class ConcurrentSequentialProcesses {
                                         val++;
                                     }
                                 }
-                            })
+                            });
                         }
                     });
                 }
@@ -803,24 +853,26 @@ public class ConcurrentSequentialProcesses {
         return s;
     }
 
-    // 5.3 Dining Philosophers (Problem due to E.W. Dijkstra)
-    //
-    // > "Problem: Five philosophers spend their lives thinking and eating. The
-    // philosophers share a common dining room where there is a circular table
-    // surrounded by five chairs, each belonging to one philosopher. In the
-    // center of the table there is a large bowl of spaghetti, and the table is
-    // laid with five forks (see Figure 1). On feeling hungry, a philosopher
-    // enters the dining room, sits in his own chair, and picks up the fork on
-    // the left of his place. Unfortunately, the spaghetti is so tangled that
-    // he needs to pick up and use the fork on his right as well. When he has
-    // finished, he puts down both forks, and leaves the room. The room should
-    // keep a count of the number of philosophers in it."
-    //
-    // The dining philosophers are famous in Computer Science because they
-    // illustrate the problem of deadlock. As Hoare explains, "The solution
-    // given above does not prevent all five philosophers from entering the
-    // room, each picking up his left fork, and starving to death because he
-    // cannot pick up his right fork."
+    /**
+     * 5.3 Dining Philosophers (Problem due to E.W. Dijkstra)
+     *
+     * > "Problem: Five philosophers spend their lives thinking and eating. The
+     * philosophers share a common dining room where there is a circular table
+     * surrounded by five chairs, each belonging to one philosopher. In the
+     * center of the table there is a large bowl of spaghetti, and the table is
+     * laid with five forks (see Figure 1). On feeling hungry, a philosopher
+     * enters the dining room, sits in his own chair, and picks up the fork on
+     * the left of his place. Unfortunately, the spaghetti is so tangled that
+     * he needs to pick up and use the fork on his right as well. When he has
+     * finished, he puts down both forks, and leaves the room. The room should
+     * keep a count of the number of philosophers in it."
+     *
+     * The dining philosophers are famous in Computer Science because they
+     * illustrate the problem of deadlock. As Hoare explains, "The solution
+     * given above does not prevent all five philosophers from entering the
+     * room, each picking up his left fork, and starving to death because he
+     * cannot pick up his right fork."
+     */
     public static void S53_DiningPhilosophers(int runFor) {
         // The room is a goroutine that listens on a channel to signal "enter"
         // and one to signal "exit".
@@ -956,26 +1008,28 @@ public class ConcurrentSequentialProcesses {
         return x;
     }
 
-    // 6.1 Prime Numbers: The Sieve of Eratosthenes
-    //
-    // > "Problem: To print in ascending order all primes less than 10000. Use
-    // an array of processes, SIEVE, in which each process inputs a prime from
-    // its predecessor and prints it. The process then inputs an ascending
-    // stream of numbers from its predecessor and passes them on to its
-    // successor, suppressing any that are multiples of the original prime."
-    //
-    // Here I ran into a problem that I suspect is with the algorithm itself.
-    // It uses one process aka goroutine per prime number. The pseudocode in
-    // the paper instantiates 101 processes, enough for the first 100 primes.
-    // However, it sends the numbers up to 10.000 to the first process, which
-    // contain the first 1229 primes. Maybe I overlooked something about how
-    // the paper's pseudo-implementation handles this, but in my Go
-    // implementation I get a deadlock after these first 100 primes.
-    //
-    // Not wanting to spend too much time on this, I changed the function
-    // signature to accept a numPrimes parameter giving the number of
-    // primes to generate.
-    public static void S61_SIEVE(final int numPrimes int, final Channel<Integer> primes) {
+    /**
+     * 6.1 Prime Numbers: The Sieve of Eratosthenes
+     *
+     * > "Problem: To print in ascending order all primes less than 10000. Use
+     * an array of processes, SIEVE, in which each process inputs a prime from
+     * its predecessor and prints it. The process then inputs an ascending
+     * stream of numbers from its predecessor and passes them on to its
+     * successor, suppressing any that are multiples of the original prime."
+     *
+     * Here I ran into a problem that I suspect is with the algorithm itself.
+     * It uses one process aka goroutine per prime number. The pseudocode in
+     * the paper instantiates 101 processes, enough for the first 100 primes.
+     * However, it sends the numbers up to 10.000 to the first process, which
+     * contain the first 1229 primes. Maybe I overlooked something about how
+     * the paper's pseudo-implementation handles this, but in my Go
+     * implementation I get a deadlock after these first 100 primes.
+     *
+     * Not wanting to spend too much time on this, I changed the function
+     * signature to accept a numPrimes parameter giving the number of
+     * primes to generate.
+     */
+    public static void S61_SIEVE(final int numPrimes, final Channel<Integer> primes) {
         final Channel<Integer>[] sieve = new Channel[numPrimes];
         sieve[numPrimes-1] = new Channel<Integer>();
         final Channel<Boolean> done = new Channel<Boolean>();
@@ -995,7 +1049,7 @@ public class ConcurrentSequentialProcesses {
 
                     primes.send(p);
 
-                    int mp = p; // mp is a multiple of p
+                    int mp = p;  // mp is a multiple of p
                     while (sieve[ii].isOpen()) {
                         int m = sieve[ii].receive();
                         while (m > mp) {
@@ -1032,7 +1086,7 @@ public class ConcurrentSequentialProcesses {
                         public void yield(Boolean _) {
                             break SENDNUMBERS;
                         }
-                    }
+                    };
                 }
             });
             n += 2;
@@ -1078,18 +1132,20 @@ public class ConcurrentSequentialProcesses {
         }
     }
 
-    // 6.2 An Iterative Array: Matrix Multiplication
-    //
-    // > "Problem: A square matrix A of order 3 is given. Three streams
-    // are to be input, each stream representing a column of an array IN.
-    // Three streams are to be output, each representing a column of" the
-    // product matrix IN × A."
-    //
-    // Make a new matrix with the given values (rows, then columns). This
-    // constructor will launch the goroutines for NORTH, EAST and CENTER
-    // as described in the paper. The client can then send the values of
-    // row i of IN to WEST[i] and read column j of IN × A from SOUTH[j].
-    // See the test for an example.
+    /**
+     * 6.2 An Iterative Array: Matrix Multiplication
+     *
+     * > "Problem: A square matrix A of order 3 is given. Three streams
+     * are to be input, each stream representing a column of an array IN.
+     * Three streams are to be output, each representing a column of" the
+     * product matrix IN × A."
+     *
+     * Make a new matrix with the given values (rows, then columns). This
+     * constructor will launch the goroutines for NORTH, EAST and CENTER
+     * as described in the paper. The client can then send the values of
+     * row i of IN to WEST[i] and read column j of IN × A from SOUTH[j].
+     * See the test for an example.
+     */
     public static S62_Matrix S62_NewMatrix(double[][] values) {
         int numRows = values.length;
         int numCols = values[0].length;
