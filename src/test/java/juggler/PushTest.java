@@ -6,6 +6,8 @@ import juggler.errors.ChannelClosedError;
 import juggler.errors.Rollback;
 import junit.framework.TestCase;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class PushTest extends TestCase {
 
     Push<String> push;
@@ -26,21 +28,21 @@ public class PushTest extends TestCase {
      * It should run multiple times.
      */
     public void testMultiRun() {
-        final int[] i = new int[] {0};
+        final AtomicInteger i = new AtomicInteger(0);
         push.receive(new Push.PushBlock<String>() {
             @Override
             public void yield(String v) {
-                i[0] = i[0] + 1;
+                i.getAndIncrement();
             }
         });
         assertTrue(push.sent());
         push.receive(new Push.PushBlock<String>() {
             @Override
             public void yield(String obj) {
-                i[0] = i[0] + 1;
+                i.getAndIncrement();
             }
         });
-        assertTrue(i[0] == 2);
+        assertTrue(i.intValue() == 2);
     }
 
     /**

@@ -3,6 +3,8 @@ package juggler;
 import juggler.errors.Rollback;
 import junit.framework.TestCase;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class BlockingOncePushTest extends TestCase {
 
@@ -18,13 +20,13 @@ public class BlockingOncePushTest extends TestCase {
      * It should only send only once.
      */
     public void testSendOnce() {
-        final int[] i = new int[] {0};
+        final AtomicInteger i = new AtomicInteger(0);
 
         assertFalse(blocking_once.performed());
         push.receive(new Push.PushBlock<String>() {
             @Override
             public void yield(String v) {
-                i[0] = i[0] + 1;
+                i.getAndIncrement();
             }
         });
         assertTrue(push.sent());
@@ -33,10 +35,10 @@ public class BlockingOncePushTest extends TestCase {
         push.receive(new Push.PushBlock<String>() {
             @Override
             public void yield(String obj) {
-                i[0] = i[0] + 1;
+                i.getAndIncrement();
             }
         });
-        assertEquals(1, i[0]);
+        assertEquals(1, i.intValue());
 
         try {
             push.receive(new Push.PushBlock<String>() {

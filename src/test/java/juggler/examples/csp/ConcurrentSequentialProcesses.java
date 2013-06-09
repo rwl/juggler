@@ -11,6 +11,9 @@ import juggler.Juggler.Consumer;
 import juggler.Selector;
 import juggler.examples.balance.Request;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import static juggler.Juggler.go;
 import static juggler.Selector.select;
 
@@ -385,7 +388,7 @@ public class ConcurrentSequentialProcesses {
      */
     public static class S43_IntSet {
         int[] content;
-        Object/*sync.RWMutex*/ writeLock;
+        ReentrantReadWriteLock writeLock;
 
         public S43_IntSet(int[] content) {
             this.content = content;
@@ -422,10 +425,10 @@ public class ConcurrentSequentialProcesses {
                 go(new Runnable() {
                     @Override
                     public void run() {
-                        writeLock.RLock();
+                        writeLock.readLock().lock();
                         int i = search(n);
                         res.send(i < content.length);
-                        writeLock.RUnlock();
+                        writeLock.readLock().unlock();
                     }
                 });
             }
@@ -450,14 +453,14 @@ public class ConcurrentSequentialProcesses {
                 go(new Runnable() {
                     @Override
                     public void run() {
-                        writeLock.Lock();
+                        writeLock.writeLock().lock();
                         int i = search(n);
                         int size = content.length;
                         // If i is < size, n is already in the set, see Has().
                         if (i == size && size <= 100) {
                             content = append(content, n);
                         }
-                        writeLock.Unlock();
+                        writeLock.writeLock().unlock();
                         if (ack != null) {
                             ack.send(1);
                         }
@@ -483,11 +486,11 @@ public class ConcurrentSequentialProcesses {
             go(new Runnable() {
                 @Override
                 public void run() {
-                    writeLock.RLock();
+                    writeLock.readLock().lock();
                     for (int c : content) {
                         res.send(c);
                     }
-                    writeLock.RUnlock();
+                    writeLock.readLock().unlock();
                     res.close();
                 }
             });
@@ -725,12 +728,13 @@ public class ConcurrentSequentialProcesses {
         final Channel<Integer> consumer = new Channel<Integer>();
         final Channel<Integer> producer = new Channel<Integer>();
 
-        final int in = 0, out = 0;
+        final AtomicInteger in = new AtomicInteger(0);
+        final AtomicInteger out = new AtomicInteger(0);
         go(new Runnable() {
             @Override
             public void run() {
                 while (true) {
-                    if (in < out+10) {
+                    if (in.intValue() < out.intValue() + 10) {
                         // We have room in the buffer, check the producer.
                         select(new Selector.SelectorBlock() {
                             @Override
@@ -738,8 +742,8 @@ public class ConcurrentSequentialProcesses {
                                 s.receiveCase(producer, new Selector.ReceiveBlock<Integer>() {
                                     @Override
                                     public void yield(Integer i) {
-                                        buffer[in%bufSize] = i;
-                                        in++;
+                                        buffer[in.intValue() % bufSize] = i;
+                                        in.incrementAndGet();
                                     }
                                 });
                                 s.defaultCase(null); // don't block
@@ -747,15 +751,15 @@ public class ConcurrentSequentialProcesses {
                         });
                     }
 
-                    if (out < in) {
+                    if (out.intValue() < in.intValue()) {
                         // We have something in the buffer, check the consumer.
                         select(new Selector.SelectorBlock() {
                             @Override
                             public void yield(Selector s) {
-                                s.sendCase(consumer, buffer[out%bufSize], new Selector.SendBlock() {
+                                s.sendCase(consumer, buffer[out.intValue() % bufSize], new Selector.SendBlock() {
                                     @Override
                                     public void yield() {
-                                        out++;
+                                        out.incrementAndGet();
                                     }
                                 });
                                 s.defaultCase(null); // don't block
@@ -814,14 +818,14 @@ public class ConcurrentSequentialProcesses {
         s.inc = new Channel<Object>();
         s.dec = new Channel<Object>();
 
-        final int val = 0;
+        final AtomicInteger val = new AtomicInteger(0);
 
         go(new Runnable() {
             @Override
             public void run() {
                 // We need at least one increment before we can react to dec.
                 s.inc.receive();
-                val++;
+                val.getAndIncrement();
 
                 while (true) {
                     select(new Selector.SelectorBlock() {
@@ -830,17 +834,17 @@ public class ConcurrentSequentialProcesses {
                             sel.receiveCase(s.inc, new Selector.ReceiveBlock<Object>() {
                                 @Override
                                 public void yield(Object _) {
-                                    val++;
+                                    val.getAndIncrement();
                                 }
                             });
                             sel.receiveCase(s.dec, new Selector.ReceiveBlock<Object>() {
                                 @Override
                                 public void yield(Object value) {
-                                    val--;
+                                    val.getAndDecrement();
                                     // If val is 0, we need an inc before we can continue.
-                                    if (val == 0) {
+                                    if (val.intValue() == 0) {
                                         s.inc.receive();
-                                        val++;
+                                        val.getAndIncrement();
                                     }
                                 }
                             });
